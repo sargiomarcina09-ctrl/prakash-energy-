@@ -1,6 +1,6 @@
 const phone = "918318643370";
 const defaultMessage = "Hello Prakash Energy, I want a free solar site survey / quotation.";
-const GOOGLE_SHEETS_WEB_APP_URL = "";
+const GOOGLE_SHEETS_WEB_APP_URL = window.PRAKASH_CONFIG?.googleSheetsWebAppUrl || "";
 
 const formatINR = (value) =>
   `Rs. ${new Intl.NumberFormat("en-IN", {
