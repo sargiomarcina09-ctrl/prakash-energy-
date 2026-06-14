@@ -1,5 +1,6 @@
 const phone = "918318643370";
 const defaultMessage = "Hello Prakash Energy, I want a free solar site survey / quotation.";
+const GOOGLE_SHEETS_WEB_APP_URL = "";
 
 const formatINR = (value) =>
   `Rs. ${new Intl.NumberFormat("en-IN", {
@@ -15,8 +16,22 @@ const compactINR = (value) => {
 const whatsappUrl = (message = defaultMessage) =>
   `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 
-window.addEventListener("load", () => {
-  document.querySelector(".loader")?.classList.add("loaded");
+const hideLoader = () => document.querySelector(".loader")?.classList.add("loaded");
+window.addEventListener("DOMContentLoaded", () => setTimeout(hideLoader, 500));
+window.addEventListener("load", hideLoader);
+setTimeout(hideLoader, 1800);
+
+const header = document.querySelector(".site-header");
+const setHeaderState = () => header?.classList.toggle("scrolled", window.scrollY > 24);
+setHeaderState();
+window.addEventListener("scroll", setHeaderState, { passive: true });
+
+const heroVideo = document.querySelector(".hero-video");
+heroVideo?.addEventListener("error", () => {
+  document.querySelector(".hero-media")?.style.setProperty("opacity", "1");
+});
+heroVideo?.play?.().catch(() => {
+  document.querySelector(".hero-media")?.style.setProperty("opacity", "1");
 });
 
 document.querySelectorAll("[data-whatsapp]").forEach((link) => {
@@ -50,7 +65,10 @@ const revealObserver = new IntersectionObserver(
   { threshold: 0.14 }
 );
 
-document.querySelectorAll(".reveal").forEach((item) => revealObserver.observe(item));
+document.querySelectorAll(".reveal").forEach((item, index) => {
+  item.style.setProperty("--reveal-delay", `${Math.min(index % 6, 5) * 55}ms`);
+  revealObserver.observe(item);
+});
 
 const countObserver = new IntersectionObserver(
   (entries) => {
@@ -159,14 +177,17 @@ document.addEventListener("keydown", (event) => {
 });
 
 const heroMedia = document.querySelector(".hero-media");
+const heroVisuals = [document.querySelector(".hero-video"), heroMedia].filter(Boolean);
 const hero = document.querySelector("[data-parallax]");
 
 window.addEventListener(
   "scroll",
   () => {
-    if (!heroMedia || !hero) return;
+    if (!heroVisuals.length || !hero) return;
     const offset = Math.min(window.scrollY * 0.08, 46);
-    heroMedia.style.transform = `scale(1.04) translateY(${offset}px)`;
+    heroVisuals.forEach((visual) => {
+      visual.style.transform = `scale(1.04) translateY(${offset}px)`;
+    });
   },
   { passive: true }
 );
@@ -179,19 +200,54 @@ hero?.addEventListener("pointermove", (event) => {
   hero.style.setProperty("--my", `${y * 20}px`);
 });
 
-document.querySelector("#leadForm")?.addEventListener("submit", (event) => {
+async function sendLeadToGoogleSheets(payload) {
+  if (!GOOGLE_SHEETS_WEB_APP_URL) return false;
+
+  const body = new URLSearchParams(payload);
+  await fetch(GOOGLE_SHEETS_WEB_APP_URL, {
+    method: "POST",
+    mode: "no-cors",
+    body,
+  });
+  return true;
+}
+
+document.querySelector("#leadForm")?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
+  const payload = {
+    timestamp: new Date().toISOString(),
+    source: "Prakash Energy website",
+    page: window.location.href,
+    name: form.get("name") || "",
+    phone: form.get("phone") || "",
+    address: form.get("address") || "",
+    bill: form.get("bill") || "",
+    message: form.get("message") || "",
+    estimatedSolarSize: solarSize?.textContent || "",
+    estimatedAnnualSavings: annualSavings?.textContent || "",
+    estimatedPayback: payback?.textContent || "",
+    estimatedLifetimeSavings: lifetimeSavings?.textContent || "",
+  };
   const details = [
     "Hello Prakash Energy, I want a free solar site survey / quotation.",
-    `Name: ${form.get("name") || ""}`,
-    `Phone: ${form.get("phone") || ""}`,
-    `Address: ${form.get("address") || ""}`,
-    `Monthly bill: Rs. ${form.get("bill") || ""}`,
-    `Message: ${form.get("message") || ""}`,
+    `Name: ${payload.name}`,
+    `Phone: ${payload.phone}`,
+    `Address: ${payload.address}`,
+    `Monthly bill: Rs. ${payload.bill}`,
+    `Estimated solar size: ${payload.estimatedSolarSize}`,
+    `Estimated annual savings: ${payload.estimatedAnnualSavings}`,
+    `Message: ${payload.message}`,
   ].join("\n");
 
   const status = document.querySelector("#formStatus");
-  if (status) status.textContent = "Opening WhatsApp with your inquiry...";
+  if (status) status.textContent = "Saving your inquiry and opening WhatsApp...";
+  try {
+    const saved = await sendLeadToGoogleSheets(payload);
+    if (status && saved) status.textContent = "Inquiry saved. Opening WhatsApp...";
+    if (status && !saved) status.textContent = "Opening WhatsApp with your inquiry...";
+  } catch (error) {
+    if (status) status.textContent = "WhatsApp is opening. We could not save to Sheets right now.";
+  }
   window.open(whatsappUrl(details), "_blank", "noreferrer");
 });

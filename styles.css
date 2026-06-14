@@ -27,6 +27,7 @@ body {
   background: var(--bg);
   color: var(--ink);
   line-height: 1.5;
+  overflow-x: hidden;
 }
 
 body.menu-open {
@@ -61,6 +62,17 @@ img {
   transition: opacity 0.55s ease, visibility 0.55s ease;
 }
 
+.loader::before {
+  content: "";
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: conic-gradient(from 120deg, transparent, rgba(250, 204, 21, 0.35), transparent 42%);
+  animation: spin 1.35s linear infinite;
+}
+
 .loader.loaded {
   opacity: 0;
   visibility: hidden;
@@ -74,6 +86,7 @@ img {
   border: 1px solid rgba(255, 255, 255, 0.25);
   border-radius: 50%;
   animation: pulse 1.8s ease-in-out infinite;
+  z-index: 1;
 }
 
 .loader-mark span {
@@ -91,6 +104,12 @@ img {
   transition: transform 0.25s ease;
 }
 
+.site-header.scrolled .nav-shell {
+  min-height: 62px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 14px 42px rgba(10, 37, 64, 0.16);
+}
+
 .nav-shell {
   width: min(1180px, 100%);
   min-height: 68px;
@@ -104,6 +123,7 @@ img {
   box-shadow: 0 18px 48px rgba(10, 37, 64, 0.14);
   backdrop-filter: blur(18px);
   border-radius: 8px;
+  transition: min-height 0.24s ease, background 0.24s ease, box-shadow 0.24s ease;
 }
 
 .brand {
@@ -220,10 +240,18 @@ img {
   padding: 136px 20px 52px;
 }
 
+.hero-video,
 .hero-media,
 .hero-overlay {
   position: absolute;
   inset: 0;
+}
+
+.hero-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.01);
 }
 
 .hero-media {
@@ -232,6 +260,7 @@ img {
   background-position: center;
   transform: scale(1.04);
   will-change: transform;
+  opacity: 0;
 }
 
 .hero-overlay {
@@ -281,7 +310,7 @@ img {
 .hero h1 {
   width: min(760px, 100%);
   margin: 0;
-  font-size: clamp(3rem, 8vw, 6.8rem);
+  font-size: clamp(2.45rem, 8vw, 6.8rem);
   line-height: 0.94;
   letter-spacing: 0;
 }
@@ -291,6 +320,7 @@ img {
   margin: 22px 0 0;
   color: rgba(255, 255, 255, 0.84);
   font-size: clamp(1rem, 2.2vw, 1.28rem);
+  overflow-wrap: anywhere;
 }
 
 .hero-actions,
@@ -312,6 +342,7 @@ img {
   border-radius: 8px;
   font-weight: 900;
   cursor: pointer;
+  text-align: center;
   transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
 }
 
@@ -433,6 +464,24 @@ img {
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(234, 246, 252, 0.82)),
     white;
+  overflow: hidden;
+  position: relative;
+}
+
+.stat-card::after {
+  content: "";
+  position: absolute;
+  inset: auto 18px 16px;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--orange), var(--sky), var(--green));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.7s ease 0.25s;
+}
+
+.stat-card.visible::after {
+  transform: scaleX(1);
 }
 
 .stat-card strong {
@@ -1069,18 +1118,23 @@ address {
 
 .reveal {
   opacity: 0;
-  transform: translateY(24px);
-  transition: opacity 0.72s ease, transform 0.72s ease;
+  transform: translateY(34px) scale(0.98);
+  transition: opacity 0.78s cubic-bezier(0.22, 1, 0.36, 1), transform 0.78s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--reveal-delay, 0ms);
 }
 
 .reveal.visible {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateY(0) scale(1);
 }
 
 @keyframes pulse {
   0%, 100% { transform: scale(1); opacity: 0.88; }
   50% { transform: scale(1.08); opacity: 1; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 @keyframes floatEnergy {
@@ -1117,10 +1171,18 @@ address {
 
   .nav-shell {
     min-height: 62px;
+    gap: 10px;
+    justify-content: space-between;
   }
 
   .nav-toggle {
-    display: block;
+    display: grid;
+    place-items: center;
+    flex: 0 0 44px;
+    position: fixed;
+    top: 22px;
+    right: 22px;
+    z-index: 1002;
   }
 
   .nav-links {
@@ -1179,6 +1241,14 @@ address {
     min-height: auto;
     padding-top: 124px;
   }
+
+  .hero-video {
+    display: none;
+  }
+
+  .hero-media {
+    opacity: 1;
+  }
 }
 
 @media (max-width: 680px) {
@@ -1188,6 +1258,33 @@ address {
 
   .hero {
     padding: 112px 16px 40px;
+  }
+
+  .brand strong {
+    font-size: 0.88rem;
+  }
+
+  .brand small {
+    font-size: 0.68rem;
+  }
+
+  .brand-icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .nav-shell {
+    padding: 10px 10px 10px 12px;
+  }
+
+  .nav-toggle {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+  }
+
+  .hero-copy {
+    max-width: 34ch;
   }
 
   .hero-proof {
