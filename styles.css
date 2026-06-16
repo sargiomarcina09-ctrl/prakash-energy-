@@ -133,21 +133,21 @@ img {
   min-width: max-content;
 }
 
-.brand-icon {
-  width: 42px;
-  height: 42px;
+.brand-logo-wrap {
+  width: 48px;
+  height: 48px;
   display: grid;
   place-items: center;
-  color: white;
-  background: linear-gradient(135deg, var(--orange), var(--gold));
+  overflow: hidden;
+  background: #ffffff;
   border-radius: 8px;
-  box-shadow: 0 14px 28px rgba(249, 115, 22, 0.28);
+  box-shadow: 0 14px 28px rgba(14, 92, 170, 0.2);
 }
 
-.brand-icon svg {
-  width: 26px;
-  height: 26px;
-  fill: currentColor;
+.brand-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .brand strong,
@@ -171,7 +171,7 @@ img {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 20px;
+  gap: 16px;
   flex: 1;
   color: #30445a;
   font-weight: 700;
@@ -240,27 +240,35 @@ img {
   padding: 136px 20px 52px;
 }
 
-.hero-video,
-.hero-media,
+.hero-slider,
+.hero-slide,
 .hero-overlay {
   position: absolute;
   inset: 0;
 }
 
-.hero-video {
+.hero-slider {
+  overflow: hidden;
+  background: #071827;
+}
+
+.hero-slide {
+  display: block;
+  opacity: 0;
+  transform: scale(1.04) translateY(var(--hero-offset, 0));
+  transition: opacity 1.15s ease, transform 7s ease;
+}
+
+.hero-slide.active {
+  opacity: 1;
+  transform: scale(1.09) translateY(var(--hero-offset, 0));
+}
+
+.hero-slide img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transform: scale(1.01);
-}
-
-.hero-media {
-  background-image: url("assets/solar-hero.png");
-  background-size: cover;
-  background-position: center;
-  transform: scale(1.04);
-  will-change: transform;
-  opacity: 0;
+  object-position: center;
 }
 
 .hero-overlay {
@@ -503,6 +511,39 @@ img {
     var(--bg);
 }
 
+.about-visual,
+.manufacturing-media,
+.featured-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  background: var(--navy);
+}
+
+.about-visual img,
+.manufacturing-media img,
+.featured-card img,
+.product-strip img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.03);
+  transition: transform 0.45s ease, filter 0.45s ease;
+}
+
+.about-visual:hover img,
+.manufacturing-media:hover img,
+.featured-card:hover img,
+.product-strip article:hover img {
+  transform: scale(1.08);
+  filter: saturate(1.08) contrast(1.04);
+}
+
+.about-visual {
+  min-height: 420px;
+}
+
 .split,
 .calculator-layout,
 .testimonial-layout,
@@ -543,6 +584,66 @@ img {
 
 .services {
   background: #ffffff;
+}
+
+.manufacturing {
+  background:
+    linear-gradient(180deg, #ffffff, #eef7fb);
+}
+
+.manufacturing-layout,
+.featured-layout {
+  display: grid;
+  grid-template-columns: 0.88fr 1.12fr;
+  gap: 36px;
+  align-items: center;
+}
+
+.manufacturing-media {
+  min-height: 420px;
+}
+
+.product-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 28px;
+}
+
+.product-strip article {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 16px 46px rgba(10, 37, 64, 0.12);
+  transition: transform 0.24s ease, box-shadow 0.24s ease;
+}
+
+.product-strip article:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow);
+}
+
+.product-strip img {
+  aspect-ratio: 16 / 9;
+}
+
+.product-strip strong,
+.product-strip span {
+  display: block;
+  padding-inline: 18px;
+}
+
+.product-strip strong {
+  padding-top: 18px;
+  color: var(--navy);
+  font-size: 1.05rem;
+}
+
+.product-strip span {
+  padding-top: 6px;
+  padding-bottom: 20px;
+  color: var(--muted);
 }
 
 .service-grid {
@@ -712,6 +813,21 @@ input[type="range"] {
 
 .projects {
   background: #ffffff;
+}
+
+.featured-projects {
+  background:
+    linear-gradient(135deg, rgba(10, 37, 64, 0.96), rgba(14, 165, 233, 0.82));
+  color: white;
+}
+
+.featured-projects .section-heading h2,
+.featured-projects .section-heading p {
+  color: white;
+}
+
+.featured-card {
+  min-height: 420px;
 }
 
 .gallery-grid {
@@ -912,7 +1028,7 @@ details p {
   color: white;
   background:
     linear-gradient(135deg, rgba(10, 37, 64, 0.94), rgba(14, 165, 233, 0.82)),
-    url("assets/solar-hero.png") center / cover;
+    url("assets/hero4-1800.webp") center / cover;
 }
 
 .lead .section-heading h2,
@@ -985,6 +1101,18 @@ details p {
 .map-card {
   padding: 30px;
   min-height: 430px;
+}
+
+.contact-logo {
+  width: 118px;
+  height: 118px;
+  object-fit: contain;
+  padding: 8px;
+  margin-bottom: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 12px 30px rgba(10, 37, 64, 0.1);
 }
 
 .contact-card h2 {
@@ -1242,13 +1370,6 @@ address {
     padding-top: 124px;
   }
 
-  .hero-video {
-    display: none;
-  }
-
-  .hero-media {
-    opacity: 1;
-  }
 }
 
 @media (max-width: 680px) {
@@ -1268,7 +1389,7 @@ address {
     font-size: 0.68rem;
   }
 
-  .brand-icon {
+  .brand-logo-wrap {
     width: 38px;
     height: 38px;
   }
@@ -1307,8 +1428,17 @@ address {
   .gallery-grid,
   .timeline,
   .about-grid,
+  .manufacturing-layout,
+  .featured-layout,
+  .product-strip,
   .result-grid {
     grid-template-columns: 1fr;
+  }
+
+  .about-visual,
+  .manufacturing-media,
+  .featured-card {
+    min-height: 260px;
   }
 
   .stat-card,

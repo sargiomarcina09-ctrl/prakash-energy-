@@ -16,8 +16,9 @@
     <meta property="og:title" content="Prakash Energy | Solar Company in Lucknow" />
     <meta property="og:description" content="Premium residential, commercial and industrial solar panel installation in Lucknow and Uttar Pradesh." />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="assets/solar-hero.png" />
-    <link rel="preload" as="image" href="assets/solar-hero.png" />
+    <meta property="og:image" content="assets/hero1-1800.webp" />
+    <link rel="icon" type="image/png" href="assets/favicon.png" />
+    <link rel="preload" as="image" href="assets/hero1-1800.webp" />
     <link rel="stylesheet" href="styles.css" />
     <script type="application/ld+json">
       {
@@ -34,7 +35,7 @@
           "addressCountry": "IN"
         },
         "areaServed": ["Lucknow", "Uttar Pradesh"],
-        "image": "assets/solar-hero.png",
+        "image": "assets/prakash-energy-logo.webp",
         "priceRange": "$$"
       }
     </script>
@@ -49,11 +50,7 @@
     <header class="site-header" id="top">
       <nav class="nav-shell" aria-label="Primary navigation">
         <a class="brand" href="#top" aria-label="Prakash Energy home">
-          <span class="brand-icon">
-            <svg viewBox="0 0 48 48" aria-hidden="true">
-              <path d="M24 5 7 23h12l-4 20 26-27H27l5-11Z" />
-            </svg>
-          </span>
+          <span class="brand-logo-wrap"><img class="brand-logo" src="assets/prakash-energy-logo.webp" alt="Prakash Energy logo" width="156" height="156" /></span>
           <span>
             <strong>Prakash Energy</strong>
             <small>Solar Solutions</small>
@@ -64,6 +61,7 @@
         </button>
         <div class="nav-links">
           <a href="#services">Services</a>
+          <a href="#manufacturing">Manufacturing</a>
           <a href="#calculator">Savings</a>
           <a href="#projects">Projects</a>
           <a href="#process">Process</a>
@@ -80,10 +78,24 @@
         <div class="solar-field" aria-hidden="true">
           <span></span><span></span><span></span><span></span>
         </div>
-        <video class="hero-video" autoplay muted loop playsinline preload="metadata" poster="assets/solar-hero.png" aria-hidden="true">
-          <source src="assets/hero-cinematic.webm" type="video/webm" />
-        </video>
-        <div class="hero-media" aria-hidden="true"></div>
+        <div class="hero-slider" aria-hidden="true">
+          <picture class="hero-slide active">
+            <source media="(max-width: 700px)" srcset="assets/hero1-980.webp" />
+            <img src="assets/hero1-1800.webp" alt="" width="1800" height="1006" />
+          </picture>
+          <picture class="hero-slide">
+            <source media="(max-width: 700px)" srcset="assets/hero2-980.webp" />
+            <img src="assets/hero2-1800.webp" alt="" width="1800" height="1013" loading="lazy" />
+          </picture>
+          <picture class="hero-slide">
+            <source media="(max-width: 700px)" srcset="assets/hero3-980.webp" />
+            <img src="assets/hero3-1800.webp" alt="" width="1800" height="1013" loading="lazy" />
+          </picture>
+          <picture class="hero-slide">
+            <source media="(max-width: 700px)" srcset="assets/hero4-980.webp" />
+            <img src="assets/hero4-1800.webp" alt="" width="1800" height="1013" loading="lazy" />
+          </picture>
+        </div>
         <div class="hero-overlay" aria-hidden="true"></div>
         <div class="hero-content reveal">
           <p class="eyebrow">Solar installation company in Lucknow</p>
@@ -148,24 +160,45 @@
               Prakash Energy helps homes, businesses, schools, hospitals, factories and institutions transition to clean power with professional design, installation and support.
             </p>
           </div>
-          <div class="about-grid">
-            <article class="glass-card reveal">
-              <h3>Why Solar</h3>
-              <p>Lower monthly bills, reduce grid dependence and lock in cleaner energy for decades.</p>
-            </article>
-            <article class="glass-card reveal">
-              <h3>Why Prakash Energy</h3>
-              <p>Site-specific design, careful installation, net metering guidance and responsive service.</p>
-            </article>
-            <article class="glass-card reveal">
-              <h3>Mission</h3>
-              <p>Make high-quality solar power accessible, transparent and financially sensible.</p>
-            </article>
-            <article class="glass-card reveal">
-              <h3>Vision</h3>
-              <p>Power Uttar Pradesh with smarter rooftops, cleaner businesses and future-ready communities.</p>
-            </article>
+          <div class="about-visual reveal">
+            <img src="assets/hero4-980.webp" alt="Prakash Energy solar mounting structure installed on rooftop panels" width="980" height="548" loading="lazy" />
           </div>
+        </div>
+        <div class="section-inner about-grid">
+          <article class="glass-card reveal">
+            <h3>Why Solar</h3>
+            <p>Lower monthly bills, reduce grid dependence and lock in cleaner energy for decades.</p>
+          </article>
+          <article class="glass-card reveal">
+            <h3>Why Prakash Energy</h3>
+            <p>Site-specific design, careful installation, precision mounting structures and responsive service.</p>
+          </article>
+          <article class="glass-card reveal">
+            <h3>Mission</h3>
+            <p>Make high-quality solar power accessible, transparent and financially sensible.</p>
+          </article>
+          <article class="glass-card reveal">
+            <h3>Vision</h3>
+            <p>Power Uttar Pradesh with smarter rooftops, cleaner businesses and future-ready communities.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section manufacturing" id="manufacturing">
+        <div class="section-inner manufacturing-layout">
+          <div class="section-heading reveal">
+            <p class="eyebrow">Products & manufacturing</p>
+            <h2>Solar mounting solutions engineered for industrial-grade durability.</h2>
+            <p>From superior material selection to precise manufacturing and reliable packaging, Prakash Energy focuses on structures built to last in demanding conditions.</p>
+          </div>
+          <div class="manufacturing-media reveal">
+            <img src="assets/hero2-980.webp" alt="Engineered Prakash Energy solar mounting structure and rooftop solar panels" width="980" height="552" loading="lazy" />
+          </div>
+        </div>
+        <div class="section-inner product-strip">
+          <article class="reveal"><img src="assets/hero1-560.webp" alt="Solar mounting materials and packaging" width="560" height="313" loading="lazy" /><strong>Premium Material</strong><span>High-grade corrosion-resistant structures.</span></article>
+          <article class="reveal"><img src="assets/hero2-560.webp" alt="Solar mounting profiles engineered for strength" width="560" height="315" loading="lazy" /><strong>Precision Engineering</strong><span>Designed for strength and long-term reliability.</span></article>
+          <article class="reveal"><img src="assets/hero4-560.webp" alt="Rooftop mounting clamp and rail close-up" width="560" height="315" loading="lazy" /><strong>Easy Installation</strong><span>Mounting systems made for secure site execution.</span></article>
         </div>
       </section>
 
@@ -236,10 +269,23 @@
             <h2>Premium rooftop and commercial solar installations.</h2>
           </div>
           <div class="gallery-grid">
-            <button class="gallery-item reveal" data-title="Residential rooftop solar" style="--pos: 68% 54%"><img src="assets/solar-hero.png" alt="Residential rooftop solar installation" /></button>
-            <button class="gallery-item reveal" data-title="Villa solar system" style="--pos: 50% 58%"><img src="assets/solar-hero.png" alt="Villa solar system" /></button>
-            <button class="gallery-item reveal" data-title="Commercial rooftop installation" style="--pos: 82% 50%"><img src="assets/solar-hero.png" alt="Commercial rooftop solar installation" /></button>
-            <button class="gallery-item reveal" data-title="Before and after roof upgrade" style="--pos: 26% 60%"><img src="assets/solar-hero.png" alt="Before and after solar roof showcase" /></button>
+            <button class="gallery-item reveal" data-title="Solar mounting solutions" style="--pos: 50% 50%"><img src="assets/hero1-980.webp" alt="Prakash Energy solar mounting solutions showcase" width="980" height="548" loading="lazy" /></button>
+            <button class="gallery-item reveal" data-title="Engineered for strength" style="--pos: 72% 48%"><img src="assets/hero2-980.webp" alt="Solar mounting structure engineered for strength" width="980" height="552" loading="lazy" /></button>
+            <button class="gallery-item reveal" data-title="Manufacturing and packaging" style="--pos: 50% 64%"><img src="assets/hero3-980.webp" alt="Solar structure manufacturing and packaging" width="980" height="552" loading="lazy" /></button>
+            <button class="gallery-item reveal" data-title="Rooftop rail installation" style="--pos: 70% 44%"><img src="assets/hero4-980.webp" alt="Solar mounting rail installed on rooftop panels" width="980" height="552" loading="lazy" /></button>
+          </div>
+        </div>
+      </section>
+
+      <section class="section featured-projects" id="featured-projects">
+        <div class="section-inner featured-layout">
+          <div class="featured-card reveal">
+            <img src="assets/hero3-980.webp" alt="Prakash Energy solar mounting products for featured industrial projects" width="980" height="552" loading="lazy" />
+          </div>
+          <div class="section-heading reveal">
+            <p class="eyebrow">Featured projects</p>
+            <h2>From structure supply to rooftop execution, built for a brighter tomorrow.</h2>
+            <p>Prakash Energy brings together solar project consultation, mounting structures, installation support and long-term service for residential, commercial and industrial clients.</p>
           </div>
         </div>
       </section>
@@ -337,6 +383,7 @@
       <section class="section contact" id="contact">
         <div class="section-inner contact-layout">
           <div class="contact-card reveal">
+            <img class="contact-logo" src="assets/prakash-energy-logo.webp" alt="Prakash Energy logo" width="260" height="260" loading="lazy" />
             <p class="eyebrow">Contact</p>
             <h2>Prakash Energy</h2>
             <address>
@@ -367,7 +414,7 @@
     <footer class="site-footer">
       <div class="section-inner footer-inner">
         <a class="brand" href="#top">
-          <span class="brand-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 5 7 23h12l-4 20 26-27H27l5-11Z" /></svg></span>
+          <span class="brand-logo-wrap"><img class="brand-logo" src="assets/prakash-energy-logo.webp" alt="Prakash Energy logo" width="156" height="156" loading="lazy" /></span>
           <span><strong>Prakash Energy</strong><small>Solar Solutions</small></span>
         </a>
         <p>Solar Installation Lucknow | Solar Company Lucknow | Solar Panel Installation UP</p>
@@ -385,7 +432,7 @@
 
     <div class="lightbox" hidden>
       <button type="button" aria-label="Close gallery image">x</button>
-      <img alt="" />
+      <img src="assets/hero1-980.webp" alt="" width="980" height="548" loading="lazy" />
       <p></p>
     </div>
 
