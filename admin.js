@@ -1,93 +1,183 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="robots" content="noindex, nofollow" />
-    <meta name="theme-color" content="#071827" />
-    <title>View Leads | Prakash Energy Admin</title>
-    <link rel="icon" type="image/png" href="assets/favicon.png" />
-    <link rel="stylesheet" href="admin.css" />
-  </head>
-  <body>
-    <main class="admin-shell">
-      <section class="admin-hero">
-        <a class="brand" href="index.html" aria-label="Back to Prakash Energy website">
-          <span class="brand-logo-wrap"><img class="brand-logo" src="assets/prakash-energy-logo.webp" alt="Prakash Energy logo" width="156" height="156" /></span>
-          <span>
-            <strong>Prakash Energy</strong>
-            <small>Lead Dashboard</small>
-          </span>
-        </a>
-        <div class="hero-copy">
-          <p>Secure Admin</p>
-          <h1>View Leads</h1>
-          <span>Search, review, and call new solar inquiries from one clean dashboard.</span>
-        </div>
-      </section>
+const ADMIN_ENDPOINT = window.PRAKASH_CONFIG?.googleSheetsWebAppUrl || "";
+const sessionKey = "prakash_admin_password_hash";
 
-      <section class="admin-panel" id="loginPanel">
-        <div>
-          <p class="eyebrow">Password protected</p>
-          <h2>Enter admin password</h2>
-          <p class="muted">The password is verified by Google Apps Script before lead data is returned.</p>
-        </div>
-        <form id="loginForm" class="login-form">
-          <label for="adminPassword">Admin Password</label>
-          <div class="password-row">
-            <input id="adminPassword" name="password" type="password" autocomplete="current-password" required />
-            <button type="submit">View Leads</button>
-          </div>
-          <p id="loginStatus" role="status"></p>
-        </form>
-      </section>
+const loginPanel = document.querySelector("#loginPanel");
+const dashboard = document.querySelector("#dashboard");
+const loginForm = document.querySelector("#loginForm");
+const loginStatus = document.querySelector("#loginStatus");
+const leadRows = document.querySelector("#leadRows");
+const leadSearch = document.querySelector("#leadSearch");
+const totalLeads = document.querySelector("#totalLeads");
+const latestLead = document.querySelector("#latestLead");
+const emptyState = document.querySelector("#emptyState");
+const refreshLeads = document.querySelector("#refreshLeads");
+const lockDashboard = document.querySelector("#lockDashboard");
 
-      <section class="dashboard" id="dashboard" hidden>
-        <div class="dashboard-head">
-          <div>
-            <p class="eyebrow">Google Sheets leads</p>
-            <h2>Solar inquiries</h2>
-          </div>
-          <div class="dashboard-actions">
-            <button id="refreshLeads" type="button">Refresh</button>
-            <button id="lockDashboard" type="button">Lock</button>
-          </div>
-        </div>
+let leads = [];
+let passwordHash = sessionStorage.getItem(sessionKey) || "";
 
-        <div class="metric-grid">
-          <article>
-            <span>Total Leads</span>
-            <strong id="totalLeads">0</strong>
-          </article>
-          <article>
-            <span>Latest Lead</span>
-            <strong id="latestLead">-</strong>
-          </article>
-        </div>
+const setStatus = (message) => {
+  if (loginStatus) loginStatus.textContent = message;
+};
 
-        <label class="search-box" for="leadSearch">
-          <span>Search leads</span>
-          <input id="leadSearch" type="search" placeholder="Search by name, phone, message, or date" />
-        </label>
+async function sha256(value) {
+  const bytes = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
 
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Name</th>
-                <th>Phone</th>
-                <th>Message</th>
-              </tr>
-            </thead>
-            <tbody id="leadRows"></tbody>
-          </table>
-          <div class="empty-state" id="emptyState" hidden>No matching leads found.</div>
-        </div>
-      </section>
-    </main>
+function fetchJsonp(url) {
+  return new Promise((resolve, reject) => {
+    const callbackName = `prakashLeads_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    const script = document.createElement("script");
+    const separator = url.includes("?") ? "&" : "?";
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error("Lead request timed out."));
+    }, 15000);
 
-    <script src="config.js"></script>
-    <script src="admin.js"></script>
-  </body>
-</html>
+    function cleanup() {
+      clearTimeout(timeout);
+      script.remove();
+      delete window[callbackName];
+    }
+
+    window[callbackName] = (payload) => {
+      cleanup();
+      resolve(payload);
+    };
+
+    script.onerror = () => {
+      cleanup();
+      reject(new Error("Unable to reach Google Apps Script."));
+    };
+
+    script.src = `${url}${separator}callback=${encodeURIComponent(callbackName)}`;
+    document.body.appendChild(script);
+  });
+}
+
+async function loadLeads() {
+  if (!ADMIN_ENDPOINT) {
+    throw new Error("Add your Google Apps Script Web App URL in config.js first.");
+  }
+
+  if (!passwordHash) {
+    throw new Error("Enter the admin password.");
+  }
+
+  const params = new URLSearchParams({
+    action: "listLeads",
+    passwordHash,
+  });
+  const payload = await fetchJsonp(`${ADMIN_ENDPOINT}?${params.toString()}`);
+
+  if (!payload?.ok) {
+    throw new Error(payload?.message || "Access denied.");
+  }
+
+  leads = Array.isArray(payload.leads) ? payload.leads : [];
+  renderLeads();
+}
+
+function formatDate(value) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function renderLeads() {
+  const query = leadSearch?.value.trim().toLowerCase() || "";
+  const filtered = leads.filter((lead) =>
+    [lead.date, lead.name, lead.phone, lead.message].some((value) =>
+      String(value || "").toLowerCase().includes(query)
+    )
+  );
+
+  if (totalLeads) totalLeads.textContent = leads.length.toLocaleString("en-IN");
+  if (latestLead) latestLead.textContent = leads.length ? formatDate(leads[0].date) : "-";
+  if (emptyState) emptyState.hidden = filtered.length > 0;
+
+  if (!leadRows) return;
+  leadRows.innerHTML = filtered
+    .map(
+      (lead) => `
+        <tr>
+          <td data-label="Date">${escapeHtml(formatDate(lead.date))}</td>
+          <td data-label="Name">${escapeHtml(lead.name || "-")}</td>
+          <td data-label="Phone">${escapeHtml(lead.phone || "-")}</td>
+          <td data-label="Message">${escapeHtml(lead.message || "-")}</td>
+        </tr>
+      `
+    )
+    .join("");
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+async function unlock(password) {
+  passwordHash = await sha256(password);
+  sessionStorage.setItem(sessionKey, passwordHash);
+  setStatus("Checking password...");
+  await loadLeads();
+  loginPanel.hidden = true;
+  dashboard.hidden = false;
+  setStatus("");
+}
+
+loginForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const password = new FormData(event.currentTarget).get("password");
+
+  try {
+    await unlock(password);
+  } catch (error) {
+    sessionStorage.removeItem(sessionKey);
+    passwordHash = "";
+    setStatus(error.message);
+  }
+});
+
+refreshLeads?.addEventListener("click", async () => {
+  try {
+    await loadLeads();
+  } catch (error) {
+    alert(error.message);
+  }
+});
+
+lockDashboard?.addEventListener("click", () => {
+  sessionStorage.removeItem(sessionKey);
+  passwordHash = "";
+  leads = [];
+  dashboard.hidden = true;
+  loginPanel.hidden = false;
+});
+
+leadSearch?.addEventListener("input", renderLeads);
+
+if (passwordHash) {
+  loadLeads()
+    .then(() => {
+      loginPanel.hidden = true;
+      dashboard.hidden = false;
+    })
+    .catch(() => {
+      sessionStorage.removeItem(sessionKey);
+      passwordHash = "";
+    });
+}
