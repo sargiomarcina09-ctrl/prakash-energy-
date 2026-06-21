@@ -205,16 +205,75 @@ hero?.addEventListener("pointermove", (event) => {
   hero.style.setProperty("--my", `${y * 20}px`);
 });
 
-async function sendLeadToGoogleSheets(payload) {
-  if (!GOOGLE_SHEETS_WEB_APP_URL) return false;
+function buildAppsScriptUrl(baseUrl, payload) {
+  const separator = baseUrl.includes("?") ? "&" : "?";
+  return `${baseUrl}${separator}${new URLSearchParams(payload).toString()}`;
+}
 
-  const body = new URLSearchParams(payload);
-  await fetch(GOOGLE_SHEETS_WEB_APP_URL, {
-    method: "POST",
-    mode: "no-cors",
-    body,
+function fetchAppsScriptJsonp(baseUrl, payload) {
+  return new Promise((resolve, reject) => {
+    const callbackName = `prakashLeadSave_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    const script = document.createElement("script");
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error("Google Sheets request timed out."));
+    }, 15000);
+
+    function cleanup() {
+      clearTimeout(timeout);
+      script.remove();
+      delete window[callbackName];
+    }
+
+    window[callbackName] = (responsePayload) => {
+      cleanup();
+      resolve(responsePayload);
+    };
+
+    script.onerror = () => {
+      cleanup();
+      reject(new Error("Unable to reach Google Apps Script."));
+    };
+
+    script.src = buildAppsScriptUrl(baseUrl, {
+      ...payload,
+      callback: callbackName,
+    });
+    document.body.appendChild(script);
   });
-  return true;
+}
+
+async function postLeadToGoogleSheets(baseUrl, payload) {
+  const response = await fetch(baseUrl, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+    },
+    body: new URLSearchParams(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Google Sheets returned ${response.status}.`);
+  }
+
+  return response.json();
+}
+
+async function sendLeadToGoogleSheets(payload) {
+  if (!GOOGLE_SHEETS_WEB_APP_URL) {
+    return {
+      ok: false,
+      skipped: true,
+      message: "Google Sheets Web App URL is not configured.",
+    };
+  }
+
+  try {
+    return await postLeadToGoogleSheets(GOOGLE_SHEETS_WEB_APP_URL, payload);
+  } catch (primaryError) {
+    return fetchAppsScriptJsonp(GOOGLE_SHEETS_WEB_APP_URL, payload);
+  }
 }
 
 function buildLeadMessage(payload) {
@@ -261,12 +320,21 @@ document.querySelector("#leadForm")?.addEventListener("submit", async (event) =>
 
   const status = document.querySelector("#formStatus");
   if (status) status.textContent = "Saving your inquiry and opening WhatsApp...";
+  const leadSavePromise = sendLeadToGoogleSheets(payload);
+  const whatsappWindow = window.open(whatsappUrl(details), "_blank", "noreferrer");
+
+  if (!whatsappWindow) {
+    window.location.href = whatsappUrl(details);
+  }
+
   try {
-    const saved = await sendLeadToGoogleSheets(payload);
-    if (status && saved) status.textContent = "Inquiry saved. Opening WhatsApp...";
-    if (status && !saved) status.textContent = "Opening WhatsApp with your inquiry...";
+    const responsePayload = await leadSavePromise;
+    if (status && responsePayload?.ok) status.textContent = "Inquiry saved to Google Sheets and sent on WhatsApp.";
+    if (status && responsePayload?.skipped) status.textContent = "Opening WhatsApp with your inquiry...";
+    if (status && responsePayload && !responsePayload.ok && !responsePayload.skipped) {
+      status.textContent = responsePayload.message || "WhatsApp opened, but the lead could not be saved.";
+    }
   } catch (error) {
     if (status) status.textContent = "WhatsApp is opening. We could not save to Sheets right now.";
   }
-  window.open(whatsappUrl(details), "_blank", "noreferrer");
 });

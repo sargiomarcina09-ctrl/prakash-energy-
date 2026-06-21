@@ -5,25 +5,29 @@ const ADMIN_PASSWORD_HASH_PROPERTY = "ADMIN_PASSWORD_HASH";
 const ADMIN_PASSWORD = "prakash369energy";
 
 function doPost(e) {
-  const data = e.parameter || {};
+  const data = extractRequestData_(e);
   const action = data.action || "saveLead";
 
   if (action === "saveLead") {
-    return saveLead_(data);
+    return respond_(saveLead_(data), data.callback);
   }
 
-  return json_({ ok: false, message: "Unsupported action." });
+  return respond_({ ok: false, message: "Unsupported action." }, data.callback);
 }
 
 function doGet(e) {
-  const data = e.parameter || {};
+  const data = extractRequestData_(e);
   const action = data.action || "";
 
-  if (action === "listLeads") {
-    return jsonp_(listLeads_(data.passwordHash || ""), data.callback);
+  if (action === "saveLead") {
+    return respond_(saveLead_(data), data.callback);
   }
 
-  return jsonp_({ ok: false, message: "Unsupported action." }, data.callback);
+  if (action === "listLeads") {
+    return respond_(listLeads_(data.passwordHash || ""), data.callback);
+  }
+
+  return respond_({ ok: false, message: "Unsupported action." }, data.callback);
 }
 
 function saveLead_(data) {
@@ -37,7 +41,7 @@ function saveLead_(data) {
     data.message || "",
   ]);
 
-  return json_({ ok: true });
+  return { ok: true };
 }
 
 function listLeads_(passwordHash) {
@@ -136,6 +140,38 @@ function normalizeDate_(value) {
   return value || "";
 }
 
+function extractRequestData_(e) {
+  const data = Object.assign({}, (e && e.parameter) || {});
+  const contents = e && e.postData && e.postData.contents;
+
+  if (contents) {
+    if (/application\/json/i.test((e.postData.type || ""))) {
+      try {
+        const jsonData = JSON.parse(contents);
+        Object.keys(jsonData || {}).forEach((key) => {
+          if (!(key in data)) data[key] = jsonData[key];
+        });
+      } catch (error) {
+        // Ignore malformed JSON and fall back to standard parameters.
+      }
+    } else if (Object.keys(data).length === 0) {
+      contents.split("&").forEach((pair) => {
+        if (!pair) return;
+        const parts = pair.split("=");
+        const key = decodeURIComponent((parts.shift() || "").replace(/\+/g, " "));
+        if (!key || key in data) return;
+        data[key] = decodeURIComponent(parts.join("=").replace(/\+/g, " "));
+      });
+    }
+  }
+
+  return data;
+}
+
+function respond_(payload, callback) {
+  return callback ? jsonp_(payload, callback) : json_(payload);
+}
+
 function json_(payload) {
   return ContentService
     .createTextOutput(JSON.stringify(payload))
@@ -143,7 +179,11 @@ function json_(payload) {
 }
 
 function jsonp_(payload, callback) {
-  const safeCallback = /^[a-zA-Z_$][\w$]*$/.test(callback || "") ? callback : "callback";
+  const safeCallback = /^[a-zA-Z_$][\w$]*$/.test(callback || "") ? callback : "";
+
+  if (!safeCallback) {
+    return json_(payload);
+  }
 
   return ContentService
     .createTextOutput(`${safeCallback}(${JSON.stringify(payload)});`)
