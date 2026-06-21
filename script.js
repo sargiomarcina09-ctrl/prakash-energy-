@@ -217,15 +217,31 @@ async function sendLeadToGoogleSheets(payload) {
   return true;
 }
 
+function buildLeadMessage(payload) {
+  const parts = [];
+
+  if (payload.message) parts.push(payload.message);
+  if (payload.address) parts.push(`Address: ${payload.address}`);
+  if (payload.bill) parts.push(`Monthly bill: Rs. ${payload.bill}`);
+  if (payload.estimatedSolarSize) parts.push(`Estimated solar size: ${payload.estimatedSolarSize}`);
+  if (payload.estimatedAnnualSavings) parts.push(`Estimated annual savings: ${payload.estimatedAnnualSavings}`);
+  if (payload.estimatedPayback) parts.push(`Estimated payback: ${payload.estimatedPayback}`);
+  if (payload.estimatedLifetimeSavings) parts.push(`Estimated lifetime savings: ${payload.estimatedLifetimeSavings}`);
+
+  return parts.join("\n");
+}
+
 document.querySelector("#leadForm")?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
   const payload = {
+    action: "saveLead",
     timestamp: new Date().toISOString(),
     source: "Prakash Energy website",
     page: window.location.href,
     name: form.get("name") || "",
     phone: form.get("phone") || "",
+    email: form.get("email") || "",
     address: form.get("address") || "",
     bill: form.get("bill") || "",
     message: form.get("message") || "",
@@ -234,16 +250,14 @@ document.querySelector("#leadForm")?.addEventListener("submit", async (event) =>
     estimatedPayback: payback?.textContent || "",
     estimatedLifetimeSavings: lifetimeSavings?.textContent || "",
   };
+  payload.message = buildLeadMessage(payload);
   const details = [
     "Hello Prakash Energy, I want a free solar site survey / quotation.",
     `Name: ${payload.name}`,
     `Phone: ${payload.phone}`,
-    `Address: ${payload.address}`,
-    `Monthly bill: Rs. ${payload.bill}`,
-    `Estimated solar size: ${payload.estimatedSolarSize}`,
-    `Estimated annual savings: ${payload.estimatedAnnualSavings}`,
-    `Message: ${payload.message}`,
-  ].join("\n");
+    `Email: ${payload.email}`,
+    payload.message ? `Details:\n${payload.message}` : "",
+  ].filter(Boolean).join("\n");
 
   const status = document.querySelector("#formStatus");
   if (status) status.textContent = "Saving your inquiry and opening WhatsApp...";

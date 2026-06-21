@@ -1093,6 +1093,142 @@ details p {
   box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.13);
 }
 
+.solar-products {
+  background:
+    linear-gradient(180deg, #f7fbfe, #ffffff);
+}
+
+.product-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 30px;
+}
+
+.product-badges span,
+.product-tag-row span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 8px 12px;
+  border: 1px solid rgba(14, 165, 233, 0.18);
+  border-radius: 999px;
+  color: var(--navy);
+  font-size: 0.82rem;
+  font-weight: 900;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 12px 28px rgba(10, 37, 64, 0.08);
+}
+
+.solar-product-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+.solar-product-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.74);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(238, 248, 252, 0.94));
+  box-shadow: var(--shadow);
+  transition: transform 0.26s ease, box-shadow 0.26s ease;
+}
+
+.solar-product-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 28px 80px rgba(10, 37, 64, 0.2);
+}
+
+.solar-product-media {
+  display: block;
+  overflow: hidden;
+  background: #e9f4fb;
+  aspect-ratio: 4 / 3;
+}
+
+.solar-product-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: var(--product-image-position, center);
+  transition: transform 0.45s ease, filter 0.45s ease;
+}
+
+.solar-product-card:hover .solar-product-media img {
+  transform: scale(1.09);
+  filter: saturate(1.05) contrast(1.03);
+}
+
+.solar-product-copy {
+  display: grid;
+  gap: 14px;
+  padding: 22px;
+  flex: 1;
+  align-content: start;
+}
+
+.product-tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.product-tag-row span {
+  width: fit-content;
+}
+
+.solar-product-copy h3 {
+  margin: 0;
+  color: var(--navy);
+  font-size: 1.34rem;
+  line-height: 1.1;
+}
+
+.product-models {
+  margin: 0;
+  color: var(--muted);
+}
+
+.product-models strong {
+  color: var(--navy);
+}
+
+.product-feature-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.product-feature-list li {
+  position: relative;
+  padding-left: 18px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.product-feature-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--orange), var(--sky));
+  box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.08);
+}
+
+.product-cta {
+  margin-top: auto;
+}
+
 .contact {
   background: #ffffff;
 }
@@ -1277,7 +1413,8 @@ address {
 
 @media (max-width: 1050px) {
   .stats-grid,
-  .gallery-grid {
+  .gallery-grid,
+  .solar-product-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 
@@ -1422,9 +1559,14 @@ address {
     width: 100%;
   }
 
+  .product-badges span {
+    width: auto;
+  }
+
   .stats-grid,
   .service-grid,
   .benefit-grid,
+  .solar-product-grid,
   .gallery-grid,
   .timeline,
   .about-grid,
@@ -1437,7 +1579,8 @@ address {
 
   .about-visual,
   .manufacturing-media,
-  .featured-card {
+  .featured-card,
+  .solar-product-media img {
     min-height: 260px;
   }
 

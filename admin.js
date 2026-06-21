@@ -96,7 +96,7 @@ function formatDate(value) {
 function renderLeads() {
   const query = leadSearch?.value.trim().toLowerCase() || "";
   const filtered = leads.filter((lead) =>
-    [lead.date, lead.name, lead.phone, lead.message].some((value) =>
+    [lead.date, lead.name, lead.phone, lead.email, lead.message].some((value) =>
       String(value || "").toLowerCase().includes(query)
     )
   );
@@ -113,6 +113,7 @@ function renderLeads() {
           <td data-label="Date">${escapeHtml(formatDate(lead.date))}</td>
           <td data-label="Name">${escapeHtml(lead.name || "-")}</td>
           <td data-label="Phone">${escapeHtml(lead.phone || "-")}</td>
+          <td data-label="Email">${escapeHtml(lead.email || "-")}</td>
           <td data-label="Message">${escapeHtml(lead.message || "-")}</td>
         </tr>
       `

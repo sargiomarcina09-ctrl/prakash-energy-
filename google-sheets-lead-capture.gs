@@ -1,4 +1,6 @@
+const SPREADSHEET_ID = "PASTE_SHEET_ID";
 const SHEET_NAME = "Leads";
+const LEAD_HEADERS = ["Date", "Name", "Phone", "Email", "Message"];
 const ADMIN_PASSWORD_HASH_PROPERTY = "ADMIN_PASSWORD_HASH";
 const ADMIN_PASSWORD = "prakash369energy";
 
@@ -18,8 +20,7 @@ function doGet(e) {
   const action = data.action || "";
 
   if (action === "listLeads") {
-    const response = listLeads_(data.passwordHash || "");
-    return jsonp_(response, data.callback);
+    return jsonp_(listLeads_(data.passwordHash || ""), data.callback);
   }
 
   return jsonp_({ ok: false, message: "Unsupported action." }, data.callback);
@@ -29,18 +30,11 @@ function saveLead_(data) {
   const sheet = getLeadSheet_();
 
   sheet.appendRow([
-    data.timestamp || new Date().toISOString(),
-    data.source || "Prakash Energy website",
+    parseLeadDate_(data.timestamp),
     data.name || "",
     data.phone || "",
-    data.address || "",
-    data.bill || "",
+    data.email || "",
     data.message || "",
-    data.estimatedSolarSize || "",
-    data.estimatedAnnualSavings || "",
-    data.estimatedPayback || "",
-    data.estimatedLifetimeSavings || "",
-    data.page || "",
   ]);
 
   return json_({ ok: true });
@@ -71,11 +65,18 @@ function listLeads_(passwordHash) {
     ok: true,
     leads: rows.map((row) => ({
       date: normalizeDate_(row[0]),
-      name: row[2] || "",
-      phone: row[3] || "",
-      message: row[6] || "",
+      name: row[1] || "",
+      phone: row[2] || "",
+      email: row[3] || "",
+      message: row[4] || "",
     })),
   };
+}
+
+function setupLeadSheet() {
+  getLeadSheet_();
+  syncAdminPassword();
+  Logger.log("Lead sheet is ready and admin password hash is synced.");
 }
 
 function syncAdminPassword() {
@@ -89,31 +90,42 @@ function setAdminPassword() {
 }
 
 function getLeadSheet_() {
-  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const spreadsheet = getSpreadsheet_();
   let sheet = spreadsheet.getSheetByName(SHEET_NAME);
 
   if (!sheet) {
     sheet = spreadsheet.insertSheet(SHEET_NAME);
   }
 
-  if (sheet.getLastRow() === 0) {
-    sheet.appendRow([
-      "Timestamp",
-      "Source",
-      "Name",
-      "Phone",
-      "Address",
-      "Monthly Bill",
-      "Message",
-      "Estimated Solar Size",
-      "Estimated Annual Savings",
-      "Estimated Payback",
-      "Estimated Lifetime Savings",
-      "Page",
-    ]);
+  ensureHeaders_(sheet);
+  return sheet;
+}
+
+function getSpreadsheet_() {
+  if (!SPREADSHEET_ID || SPREADSHEET_ID === "PASTE_SHEET_ID") {
+    throw new Error("Replace PASTE_SHEET_ID with your real Google Sheet ID.");
   }
 
-  return sheet;
+  return SpreadsheetApp.openById(SPREADSHEET_ID);
+}
+
+function ensureHeaders_(sheet) {
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(LEAD_HEADERS);
+    return;
+  }
+
+  const currentHeaders = sheet.getRange(1, 1, 1, LEAD_HEADERS.length).getValues()[0];
+  const matches = LEAD_HEADERS.every((header, index) => currentHeaders[index] === header);
+
+  if (!matches) {
+    sheet.getRange(1, 1, 1, LEAD_HEADERS.length).setValues([LEAD_HEADERS]);
+  }
+}
+
+function parseLeadDate_(value) {
+  const parsed = new Date(value || Date.now());
+  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
 }
 
 function normalizeDate_(value) {
