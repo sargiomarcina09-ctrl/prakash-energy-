@@ -1,200 +1,546 @@
-const SPREADSHEET_ID = "PASTE_SHEET_ID";
-const SHEET_NAME = "Leads";
-const LEAD_HEADERS = ["Date", "Name", "Phone", "Email", "Message"];
-const ADMIN_PASSWORD_HASH_PROPERTY = "ADMIN_PASSWORD_HASH";
-const ADMIN_PASSWORD = "prakash369energy";
-
-function doPost(e) {
-  const data = extractRequestData_(e);
-  const action = data.action || "saveLead";
-
-  if (action === "saveLead") {
-    return respond_(saveLead_(data), data.callback);
-  }
-
-  return respond_({ ok: false, message: "Unsupported action." }, data.callback);
-}
-
-function doGet(e) {
-  const data = extractRequestData_(e);
-  const action = data.action || "";
-
-  if (action === "saveLead") {
-    return respond_(saveLead_(data), data.callback);
-  }
-
-  if (action === "listLeads") {
-    return respond_(listLeads_(data.passwordHash || ""), data.callback);
-  }
-
-  return respond_({ ok: false, message: "Unsupported action." }, data.callback);
-}
-
-function saveLead_(data) {
-  const sheet = getLeadSheet_();
-
-  sheet.appendRow([
-    parseLeadDate_(data.timestamp),
-    data.name || "",
-    data.phone || "",
-    data.email || "",
-    data.message || "",
-  ]);
-
-  return { ok: true };
-}
-
-function listLeads_(passwordHash) {
-  const expectedHash = PropertiesService.getScriptProperties().getProperty(ADMIN_PASSWORD_HASH_PROPERTY);
-
-  if (!expectedHash) {
-    return {
-      ok: false,
-      message: "Admin password is not configured in Apps Script.",
-    };
-  }
-
-  if (!passwordHash || passwordHash !== expectedHash) {
-    return {
-      ok: false,
-      message: "Incorrect admin password.",
-    };
-  }
-
-  const sheet = getLeadSheet_();
-  const values = sheet.getDataRange().getValues();
-  const rows = values.slice(1).reverse();
-
-  return {
-    ok: true,
-    leads: rows.map((row) => ({
-      date: normalizeDate_(row[0]),
-      name: row[1] || "",
-      phone: row[2] || "",
-      email: row[3] || "",
-      message: row[4] || "",
-    })),
-  };
-}
-
-function setupLeadSheet() {
-  getLeadSheet_();
-  syncAdminPassword();
-  Logger.log("Lead sheet is ready and admin password hash is synced.");
-}
-
-function syncAdminPassword() {
-  const hash = sha256_(ADMIN_PASSWORD);
-  PropertiesService.getScriptProperties().setProperty(ADMIN_PASSWORD_HASH_PROPERTY, hash);
-  Logger.log("Admin password hash synced. Run this once after changing ADMIN_PASSWORD, then redeploy.");
-}
-
-function setAdminPassword() {
-  syncAdminPassword();
-}
-
-function getLeadSheet_() {
-  const spreadsheet = getSpreadsheet_();
-  let sheet = spreadsheet.getSheetByName(SHEET_NAME);
-
-  if (!sheet) {
-    sheet = spreadsheet.insertSheet(SHEET_NAME);
-  }
-
-  ensureHeaders_(sheet);
-  return sheet;
-}
-
-function getSpreadsheet_() {
-  if (!SPREADSHEET_ID || SPREADSHEET_ID === "PASTE_SHEET_ID") {
-    throw new Error("Replace PASTE_SHEET_ID with your real Google Sheet ID.");
-  }
-
-  return SpreadsheetApp.openById(SPREADSHEET_ID);
-}
-
-function ensureHeaders_(sheet) {
-  if (sheet.getLastRow() === 0) {
-    sheet.appendRow(LEAD_HEADERS);
-    return;
-  }
-
-  const currentHeaders = sheet.getRange(1, 1, 1, LEAD_HEADERS.length).getValues()[0];
-  const matches = LEAD_HEADERS.every((header, index) => currentHeaders[index] === header);
-
-  if (!matches) {
-    sheet.getRange(1, 1, 1, LEAD_HEADERS.length).setValues([LEAD_HEADERS]);
-  }
-}
-
-function parseLeadDate_(value) {
-  const parsed = new Date(value || Date.now());
-  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
-}
-
-function normalizeDate_(value) {
-  if (Object.prototype.toString.call(value) === "[object Date]") {
-    return value.toISOString();
-  }
-
-  return value || "";
-}
-
-function extractRequestData_(e) {
-  const data = Object.assign({}, (e && e.parameter) || {});
-  const contents = e && e.postData && e.postData.contents;
-
-  if (contents) {
-    if (/application\/json/i.test((e.postData.type || ""))) {
-      try {
-        const jsonData = JSON.parse(contents);
-        Object.keys(jsonData || {}).forEach((key) => {
-          if (!(key in data)) data[key] = jsonData[key];
-        });
-      } catch (error) {
-        // Ignore malformed JSON and fall back to standard parameters.
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Prakash Energy | Solar Company in Lucknow</title>
+    <meta
+      name="description"
+      content="Prakash Energy provides residential, commercial and industrial solar panel installation in Lucknow and Uttar Pradesh. Book a free site survey or request a solar quote."
+    />
+    <meta
+      name="keywords"
+      content="Solar Installation Lucknow, Solar Company Lucknow, Residential Solar Lucknow, Commercial Solar Lucknow, Solar Panel Installation UP"
+    />
+    <meta name="theme-color" content="#0a2540" />
+    <meta property="og:title" content="Prakash Energy | Solar Company in Lucknow" />
+    <meta property="og:description" content="Premium residential, commercial and industrial solar panel installation in Lucknow and Uttar Pradesh." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="assets/hero1-1800.webp" />
+    <link rel="icon" type="image/png" href="assets/favicon.png" />
+    <link rel="preload" as="image" href="assets/hero1-1800.webp" />
+    <link rel="stylesheet" href="styles.css" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "name": "Prakash Energy",
+        "description": "Solar panel installation, maintenance and consultation company in Lucknow, Uttar Pradesh.",
+        "telephone": "+918318643370",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "1098, Himalayan City, Near Omaxe City, Bijnor Road",
+          "addressLocality": "Lucknow",
+          "addressRegion": "Uttar Pradesh",
+          "addressCountry": "IN"
+        },
+        "areaServed": ["Lucknow", "Uttar Pradesh"],
+        "image": "assets/prakash-energy-logo.webp",
+        "priceRange": "$$"
       }
-    } else if (Object.keys(data).length === 0) {
-      contents.split("&").forEach((pair) => {
-        if (!pair) return;
-        const parts = pair.split("=");
-        const key = decodeURIComponent((parts.shift() || "").replace(/\+/g, " "));
-        if (!key || key in data) return;
-        data[key] = decodeURIComponent(parts.join("=").replace(/\+/g, " "));
-      });
-    }
-  }
+    </script>
+  </head>
+  <body>
+    <div class="loader" aria-hidden="true">
+      <div class="loader-mark">
+        <span></span>
+      </div>
+    </div>
 
-  return data;
-}
+    <header class="site-header" id="top">
+      <nav class="nav-shell" aria-label="Primary navigation">
+        <a class="brand" href="#top" aria-label="Prakash Energy home">
+          <span class="brand-logo-wrap"><img class="brand-logo" src="assets/prakash-energy-logo.webp" alt="Prakash Energy logo" width="156" height="156" /></span>
+          <span>
+            <strong>Prakash Energy</strong>
+            <small>Solar Solutions</small>
+          </span>
+        </a>
+        <button class="nav-toggle" type="button" aria-label="Open menu" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="nav-links">
+          <a href="#services">Services</a>
+          <a href="#manufacturing">Manufacturing</a>
+          <a href="#products">Products</a>
+          <a href="#calculator">Savings</a>
+          <a href="#projects">Projects</a>
+          <a href="#process">Process</a>
+          <a href="#faq">FAQ</a>
+          <a href="#contact">Contact</a>
+          <a href="admin.html">View Leads</a>
+        </div>
+        <a class="nav-cta" href="#survey">Book Survey</a>
+      </nav>
+    </header>
 
-function respond_(payload, callback) {
-  return callback ? jsonp_(payload, callback) : json_(payload);
-}
+    <main>
+      <section class="hero" data-parallax>
+        <div class="solar-field" aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+        </div>
+        <div class="hero-slider" aria-hidden="true">
+          <picture class="hero-slide active">
+            <source media="(max-width: 700px)" srcset="assets/hero1-980.webp" />
+            <img src="assets/hero1-1800.webp" alt="" width="1800" height="1006" />
+          </picture>
+          <picture class="hero-slide">
+            <source media="(max-width: 700px)" srcset="assets/hero2-980.webp" />
+            <img src="assets/hero2-1800.webp" alt="" width="1800" height="1013" loading="lazy" />
+          </picture>
+          <picture class="hero-slide">
+            <source media="(max-width: 700px)" srcset="assets/hero3-980.webp" />
+            <img src="assets/hero3-1800.webp" alt="" width="1800" height="1013" loading="lazy" />
+          </picture>
+          <picture class="hero-slide">
+            <source media="(max-width: 700px)" srcset="assets/hero4-980.webp" />
+            <img src="assets/hero4-1800.webp" alt="" width="1800" height="1013" loading="lazy" />
+          </picture>
+        </div>
+        <div class="hero-overlay" aria-hidden="true"></div>
+        <div class="hero-content reveal">
+          <p class="eyebrow">Solar installation company in Lucknow</p>
+          <h1>Power Your Future With Clean Solar Energy</h1>
+          <p class="hero-copy">
+            Reduce electricity bills and generate long-term savings with professional solar solutions from Prakash Energy.
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="#survey">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 3 7v6c0 5 4 8 9 9 5-1 9-4 9-9V7l-9-5Zm0 4.2 5 2.8v4c0 3.1-2 5.2-5 6.1-3-.9-5-3-5-6.1V9l5-2.8Z"/></svg>
+              Get Free Site Survey
+            </a>
+            <a class="btn btn-secondary" href="#calculator">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm0 5h10V4H7v3Zm1 4h2V9H8v2Zm4 0h2V9h-2v2Zm4 0h1V9h-1v2Zm-8 4h2v-2H8v2Zm4 0h2v-2h-2v2Zm4 0h1v-2h-1v2Zm-8 4h2v-2H8v2Zm4 0h5v-2h-5v2Z"/></svg>
+              Get Instant Quote
+            </a>
+            <a class="btn btn-whatsapp" data-whatsapp="hero" href="#">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a9.9 9.9 0 0 0-8.6 14.9L2 22l5.3-1.4A10 10 0 1 0 12 2Zm0 2a8 8 0 0 1 0 16 7.8 7.8 0 0 1-4.1-1.1l-.4-.2-2.5.7.7-2.4-.2-.4A8 8 0 0 1 12 4Zm-3 4.3c-.2 0-.5.1-.7.4-.2.3-.8.8-.8 2s.9 2.3 1 2.5c.1.2 1.8 2.9 4.5 3.9 2.2.9 2.7.5 3.2.5s1.5-.6 1.7-1.2c.2-.6.2-1.1.1-1.2l-1.8-.9c-.3-.1-.5-.1-.7.2l-.8 1c-.1.2-.3.2-.6.1-.3-.2-1.1-.4-2.1-1.3-.8-.7-1.3-1.6-1.5-1.9-.1-.2 0-.4.1-.5l.5-.6c.1-.2.2-.3.3-.5.1-.2.1-.4 0-.6l-.8-1.8c-.2-.4-.4-.4-.6-.4H9Z"/></svg>
+              WhatsApp Now
+            </a>
+            <a class="btn btn-call" href="tel:+918318643370">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8c1.4 2.8 3.8 5.2 6.6 6.6l2.2-2.2c.3-.3.8-.4 1.2-.2 1.3.4 2.7.7 4.1.7.7 0 1.3.6 1.3 1.3v3.6c0 .7-.6 1.4-1.3 1.4C10.4 22 2 13.6 2 3.3 2 2.6 2.6 2 3.3 2H7c.7 0 1.3.6 1.3 1.3 0 1.4.2 2.8.7 4.1.1.4 0 .9-.3 1.2l-2.1 2.2Z"/></svg>
+              Call Now
+            </a>
+          </div>
+          <div class="hero-proof">
+            <span>Lucknow & UP</span>
+            <span>Residential</span>
+            <span>Commercial</span>
+            <span>Industrial</span>
+          </div>
+        </div>
+      </section>
 
-function json_(payload) {
-  return ContentService
-    .createTextOutput(JSON.stringify(payload))
-    .setMimeType(ContentService.MimeType.JSON);
-}
+      <section class="trust section">
+        <div class="section-inner stats-grid">
+          <article class="stat-card reveal">
+            <strong><span data-count="500">0</span>+</strong>
+            <p>Installations</p>
+          </article>
+          <article class="stat-card reveal">
+            <strong><span data-count="1000">0</span>+</strong>
+            <p>Happy Customers</p>
+          </article>
+          <article class="stat-card reveal">
+            <strong><span data-count="25">0</span> Years</strong>
+            <p>Panel Performance</p>
+          </article>
+          <article class="stat-card reveal">
+            <strong><span data-count="100">0</span>%</strong>
+            <p>Quality Commitment</p>
+          </article>
+        </div>
+      </section>
 
-function jsonp_(payload, callback) {
-  const safeCallback = /^[a-zA-Z_$][\w$]*$/.test(callback || "") ? callback : "";
+      <section class="section about" id="about">
+        <div class="section-inner split">
+          <div class="section-heading reveal">
+            <p class="eyebrow">Who we are</p>
+            <h2>Modern solar systems designed for dependable long-term savings.</h2>
+            <p>
+              Prakash Energy helps homes, businesses, schools, hospitals, factories and institutions transition to clean power with professional design, installation and support.
+            </p>
+          </div>
+          <div class="about-visual reveal">
+            <img src="assets/hero4-980.webp" alt="Prakash Energy solar mounting structure installed on rooftop panels" width="980" height="548" loading="lazy" />
+          </div>
+        </div>
+        <div class="section-inner about-grid">
+          <article class="glass-card reveal">
+            <h3>Why Solar</h3>
+            <p>Lower monthly bills, reduce grid dependence and lock in cleaner energy for decades.</p>
+          </article>
+          <article class="glass-card reveal">
+            <h3>Why Prakash Energy</h3>
+            <p>Site-specific design, careful installation, precision mounting structures and responsive service.</p>
+          </article>
+          <article class="glass-card reveal">
+            <h3>Mission</h3>
+            <p>Make high-quality solar power accessible, transparent and financially sensible.</p>
+          </article>
+          <article class="glass-card reveal">
+            <h3>Vision</h3>
+            <p>Power Uttar Pradesh with smarter rooftops, cleaner businesses and future-ready communities.</p>
+          </article>
+        </div>
+      </section>
 
-  if (!safeCallback) {
-    return json_(payload);
-  }
+      <section class="section manufacturing" id="manufacturing">
+        <div class="section-inner manufacturing-layout">
+          <div class="section-heading reveal">
+            <p class="eyebrow">Products & manufacturing</p>
+            <h2>Solar mounting solutions engineered for industrial-grade durability.</h2>
+            <p>From superior material selection to precise manufacturing and reliable packaging, Prakash Energy focuses on structures built to last in demanding conditions.</p>
+          </div>
+          <div class="manufacturing-media reveal">
+            <img src="assets/hero2-980.webp" alt="Engineered Prakash Energy solar mounting structure and rooftop solar panels" width="980" height="552" loading="lazy" />
+          </div>
+        </div>
+        <div class="section-inner product-strip">
+          <article class="reveal"><img src="assets/hero1-560.webp" alt="Solar mounting materials and packaging" width="560" height="313" loading="lazy" /><strong>Premium Material</strong><span>High-grade corrosion-resistant structures.</span></article>
+          <article class="reveal"><img src="assets/hero2-560.webp" alt="Solar mounting profiles engineered for strength" width="560" height="315" loading="lazy" /><strong>Precision Engineering</strong><span>Designed for strength and long-term reliability.</span></article>
+          <article class="reveal"><img src="assets/hero4-560.webp" alt="Rooftop mounting clamp and rail close-up" width="560" height="315" loading="lazy" /><strong>Easy Installation</strong><span>Mounting systems made for secure site execution.</span></article>
+        </div>
+      </section>
 
-  return ContentService
-    .createTextOutput(`${safeCallback}(${JSON.stringify(payload)});`)
-    .setMimeType(ContentService.MimeType.JAVASCRIPT);
-}
+      <section class="section services" id="services">
+        <div class="section-inner">
+          <div class="section-heading centered reveal">
+            <p class="eyebrow">Services</p>
+            <h2>Complete solar solutions for every property type.</h2>
+          </div>
+          <div class="service-grid">
+            <article class="service-card reveal"><span>01</span><h3>Residential Solar Installation</h3><p>Rooftop solar systems for homes, villas and apartments with tailored energy sizing.</p></article>
+            <article class="service-card reveal"><span>02</span><h3>Commercial Solar Installation</h3><p>Solar plants for shops, offices, hospitals, schools and coaching institutes.</p></article>
+            <article class="service-card reveal"><span>03</span><h3>Industrial Solar Solutions</h3><p>Robust systems for factories and high-consumption facilities seeking predictable savings.</p></article>
+            <article class="service-card reveal"><span>04</span><h3>Solar Maintenance</h3><p>Performance checks, cleaning guidance, issue diagnosis and long-term system care.</p></article>
+            <article class="service-card reveal"><span>05</span><h3>Solar Consultation</h3><p>Bill analysis, load review, subsidy fit and custom proposal planning.</p></article>
+            <article class="service-card reveal"><span>06</span><h3>Net Metering Assistance</h3><p>Support for documentation and coordination so your exported energy counts.</p></article>
+          </div>
+        </div>
+      </section>
 
-function sha256_(value) {
-  return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, value)
-    .map((byte) => {
-      const unsigned = byte < 0 ? byte + 256 : byte;
-      return unsigned.toString(16).padStart(2, "0");
-    })
-    .join("");
-}
+      <section class="section calculator-section" id="calculator">
+        <div class="section-inner calculator-layout">
+          <div class="section-heading reveal">
+            <p class="eyebrow">Solar savings calculator</p>
+            <h2>See the saving potential hiding inside your monthly bill.</h2>
+            <p>Enter your electricity bill to get an instant indicative system size and savings view.</p>
+          </div>
+          <div class="calculator-card reveal">
+            <label for="bill">Monthly Electricity Bill</label>
+            <div class="range-row">
+              <span>Rs.</span>
+              <input id="bill" type="number" min="1000" max="300000" step="500" value="7500" />
+            </div>
+            <input id="billRange" type="range" min="1000" max="100000" step="500" value="7500" />
+            <div class="result-grid">
+              <article><span>Estimated Solar Size</span><strong id="solarSize">8.3 kW</strong></article>
+              <article><span>Estimated Annual Savings</span><strong id="annualSavings">Rs. 76,500</strong></article>
+              <article><span>Estimated Payback Period</span><strong id="payback">6.5 yrs</strong></article>
+              <article><span>Lifetime Savings</span><strong id="lifetimeSavings">Rs. 19.1L</strong></article>
+            </div>
+            <a class="btn btn-primary full" href="#survey">Request Exact Quote</a>
+            <p class="estimate-note">Indicative estimate. Final proposal depends on site survey, sanctioned load and system design.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section solar-benefits" id="benefits">
+        <div class="section-inner">
+          <div class="section-heading centered reveal">
+            <p class="eyebrow">Why choose solar</p>
+            <h2>Built for savings, sustainability and energy independence.</h2>
+          </div>
+          <div class="benefit-grid">
+            <article class="benefit reveal"><b>Electricity Savings</b><span>Reduce your monthly power expense.</span></article>
+            <article class="benefit reveal"><b>Government Subsidy</b><span>Explore eligible residential solar benefits.</span></article>
+            <article class="benefit reveal"><b>Environment Friendly</b><span>Lower carbon impact with clean energy.</span></article>
+            <article class="benefit reveal"><b>Property Value Increase</b><span>Upgrade your roof with a future-ready asset.</span></article>
+            <article class="benefit reveal"><b>Energy Independence</b><span>Reduce dependence on rising grid tariffs.</span></article>
+            <article class="benefit reveal"><b>Long Term Benefits</b><span>Enjoy decades of panel performance.</span></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section projects" id="projects">
+        <div class="section-inner">
+          <div class="section-heading reveal">
+            <p class="eyebrow">Project gallery</p>
+            <h2>Premium rooftop and commercial solar installations.</h2>
+          </div>
+          <div class="gallery-grid">
+            <button class="gallery-item reveal" data-title="Solar mounting solutions" style="--pos: 50% 50%"><img src="assets/hero1-980.webp" alt="Prakash Energy solar mounting solutions showcase" width="980" height="548" loading="lazy" /></button>
+            <button class="gallery-item reveal" data-title="Engineered for strength" style="--pos: 72% 48%"><img src="assets/hero2-980.webp" alt="Solar mounting structure engineered for strength" width="980" height="552" loading="lazy" /></button>
+            <button class="gallery-item reveal" data-title="Manufacturing and packaging" style="--pos: 50% 64%"><img src="assets/hero3-980.webp" alt="Solar structure manufacturing and packaging" width="980" height="552" loading="lazy" /></button>
+            <button class="gallery-item reveal" data-title="Rooftop rail installation" style="--pos: 70% 44%"><img src="assets/hero4-980.webp" alt="Solar mounting rail installed on rooftop panels" width="980" height="552" loading="lazy" /></button>
+          </div>
+        </div>
+      </section>
+
+      <section class="section featured-projects" id="featured-projects">
+        <div class="section-inner featured-layout">
+          <div class="featured-card reveal">
+            <img src="assets/hero3-980.webp" alt="Prakash Energy solar mounting products for featured industrial projects" width="980" height="552" loading="lazy" />
+          </div>
+          <div class="section-heading reveal">
+            <p class="eyebrow">Featured projects</p>
+            <h2>From structure supply to rooftop execution, built for a brighter tomorrow.</h2>
+            <p>Prakash Energy brings together solar project consultation, mounting structures, installation support and long-term service for residential, commercial and industrial clients.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section process" id="process">
+        <div class="section-inner">
+          <div class="section-heading centered reveal">
+            <p class="eyebrow">How it works</p>
+            <h2>A clear process from first call to first saving.</h2>
+          </div>
+          <div class="timeline">
+            <article class="timeline-step reveal"><span>1</span><h3>Free Consultation</h3><p>We understand your bill, property type and power goals.</p></article>
+            <article class="timeline-step reveal"><span>2</span><h3>Site Survey</h3><p>Roof space, shade, wiring and load details are reviewed.</p></article>
+            <article class="timeline-step reveal"><span>3</span><h3>Custom Design</h3><p>Your system size, layout and savings proposal are prepared.</p></article>
+            <article class="timeline-step reveal"><span>4</span><h3>Installation</h3><p>Professional mounting, panels, inverter and safety work.</p></article>
+            <article class="timeline-step reveal"><span>5</span><h3>Inspection</h3><p>System checks and approvals are coordinated carefully.</p></article>
+            <article class="timeline-step reveal"><span>6</span><h3>Savings Start</h3><p>Your roof begins generating clean energy for years.</p></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section testimonials">
+        <div class="section-inner testimonial-layout">
+          <div class="section-heading reveal">
+            <p class="eyebrow">Customer stories</p>
+            <h2>Trusted by families and growing businesses.</h2>
+          </div>
+          <div class="testimonial-card reveal">
+            <div class="slides">
+              <article class="slide active">
+                <p>"Prakash Energy explained everything clearly and gave us a solar design that matched our actual usage. The installation felt professional from day one."</p>
+                <strong>Home Owner, Lucknow</strong>
+                <span>Monthly bill reduced significantly</span>
+              </article>
+              <article class="slide">
+                <p>"Our commercial roof is now generating clean power every day. The team helped with system planning and documentation without confusion."</p>
+                <strong>Business Owner, Bijnor Road</strong>
+                <span>Custom commercial rooftop system</span>
+              </article>
+              <article class="slide">
+                <p>"We wanted dependable service and quick communication. The site survey and quotation process was smooth and confidence-building."</p>
+                <strong>Institution Client</strong>
+                <span>Energy cost control for campus use</span>
+              </article>
+            </div>
+            <div class="slider-controls" aria-label="Testimonials">
+              <button type="button" data-slide="0" class="active" aria-label="Show testimonial 1"></button>
+              <button type="button" data-slide="1" aria-label="Show testimonial 2"></button>
+              <button type="button" data-slide="2" aria-label="Show testimonial 3"></button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section faq" id="faq">
+        <div class="section-inner faq-layout">
+          <div class="section-heading reveal">
+            <p class="eyebrow">FAQ</p>
+            <h2>Common questions about solar in Lucknow.</h2>
+          </div>
+          <div class="accordion">
+            <details class="reveal" open><summary>Is subsidy available for solar?</summary><p>Residential subsidy eligibility depends on current government rules, system size and documentation. Prakash Energy can guide you during consultation.</p></details>
+            <details class="reveal"><summary>How much maintenance is required?</summary><p>Solar systems need periodic cleaning and basic performance checks. Most systems are low-maintenance when installed correctly.</p></details>
+            <details class="reveal"><summary>What warranty can I expect?</summary><p>Panel performance is typically designed for long-term output, while inverter and workmanship terms depend on the selected components and proposal.</p></details>
+            <details class="reveal"><summary>How much can I save?</summary><p>Savings depend on your bill, roof space, tariff, sanctioned load and consumption pattern. The calculator gives a quick estimate.</p></details>
+            <details class="reveal"><summary>How long does installation take?</summary><p>Most residential installations can be completed quickly after survey, design approval, material readiness and required permissions.</p></details>
+          </div>
+        </div>
+      </section>
+
+      <section class="section lead" id="survey">
+        <div class="section-inner lead-layout">
+          <div class="lead-copy reveal">
+            <p class="eyebrow">Free site survey</p>
+            <h2>Ready to turn your roof into a saving asset?</h2>
+            <p>Share your details and Prakash Energy will help you plan the right solar system for your home, business or institution.</p>
+            <div class="lead-points">
+              <span>Fast callback</span>
+              <span>Bill-based quote</span>
+              <span>Site-specific design</span>
+            </div>
+          </div>
+          <form class="lead-form reveal" id="leadForm">
+            <label>Name<input name="name" required placeholder="Your name" /></label>
+            <label>Phone<input name="phone" type="tel" required placeholder="10-digit mobile number" /></label>
+            <label>Email<input name="email" type="email" required placeholder="you@example.com" /></label>
+            <label>Address<input name="address" required placeholder="Property location" /></label>
+            <label>Monthly Electricity Bill<input name="bill" type="number" min="500" placeholder="Example: 7500" /></label>
+            <label>Message<textarea name="message" rows="4" placeholder="Tell us about your home, shop, school, hospital or factory"></textarea></label>
+            <button class="btn btn-primary full" type="submit">Send Inquiry on WhatsApp</button>
+            <p id="formStatus" role="status"></p>
+          </form>
+        </div>
+      </section>
+
+      <section class="section solar-products" id="products">
+        <div class="section-inner">
+          <div class="section-heading centered reveal">
+            <p class="eyebrow">Solar products</p>
+            <h2>Protection, inversion and electrical reliability from trusted solar brands.</h2>
+            <p>Prakash Energy now also supplies premium solar electrical products alongside mounting structures and installation support.</p>
+          </div>
+          <div class="product-badges reveal">
+            <span>Premium Quality</span>
+            <span>Trusted Brand</span>
+            <span>Reliable Performance</span>
+            <span>Warranty Support</span>
+          </div>
+          <div class="solar-product-grid">
+            <article class="solar-product-card reveal" style="--product-image-position: 50% 50%">
+              <a class="solar-product-media" href="#survey" aria-label="Get quote for Polycab DCDB and ACDB Protection Boxes">
+                <img
+                  src="assets/product-dcdb-1200.webp"
+                  srcset="assets/product-dcdb-640.webp 640w, assets/product-dcdb-1200.webp 1200w"
+                  sizes="(max-width: 680px) 100vw, (max-width: 1050px) 50vw, 33vw"
+                  alt="Polycab DCDB and ACDB protection boxes for solar systems"
+                  width="1200"
+                  height="850"
+                  loading="lazy"
+                />
+              </a>
+              <div class="solar-product-copy">
+                <div class="product-tag-row">
+                  <span>Premium Quality</span>
+                  <span>Reliable Performance</span>
+                </div>
+                <h3>Polycab DCDB & ACDB Protection Boxes</h3>
+                <ul class="product-feature-list">
+                  <li>Maximum Protection</li>
+                  <li>High Performance</li>
+                  <li>IP65 Protection</li>
+                  <li>Built To Last</li>
+                </ul>
+                <a class="btn btn-primary product-cta" href="#survey">Get Quote</a>
+              </div>
+            </article>
+
+            <article class="solar-product-card reveal" style="--product-image-position: 50% 12%">
+              <a class="solar-product-media" href="#survey" aria-label="Get quote for Polycab Solar Inverters">
+                <img
+                  src="assets/product-inverter-1200.webp"
+                  srcset="assets/product-inverter-640.webp 640w, assets/product-inverter-1200.webp 1200w"
+                  sizes="(max-width: 680px) 100vw, (max-width: 1050px) 50vw, 33vw"
+                  alt="Polycab solar inverters in 3.6kW 4kW and 5kW models"
+                  width="1200"
+                  height="1800"
+                  loading="lazy"
+                />
+              </a>
+              <div class="solar-product-copy">
+                <div class="product-tag-row">
+                  <span>Trusted Brand</span>
+                  <span>Warranty Support</span>
+                </div>
+                <h3>Polycab Solar Inverters</h3>
+                <p class="product-models"><strong>Models:</strong> 3.6kW, 4kW, 5kW</p>
+                <ul class="product-feature-list">
+                  <li>High Efficiency</li>
+                  <li>Smart Monitoring</li>
+                  <li>Pure Sine Wave Output</li>
+                  <li>Solar Compatible</li>
+                </ul>
+                <a class="btn btn-primary product-cta" href="#survey">Get Quote</a>
+              </div>
+            </article>
+
+            <article class="solar-product-card reveal" style="--product-image-position: 72% 50%">
+              <a class="solar-product-media" href="#survey" aria-label="Get quote for solar electrical protection solutions">
+                <img
+                  src="assets/product-protection-1200.webp"
+                  srcset="assets/product-protection-640.webp 640w, assets/product-protection-1200.webp 1200w"
+                  sizes="(max-width: 680px) 100vw, (max-width: 1050px) 50vw, 33vw"
+                  alt="Solar electrical protection solutions by Prakash Energy"
+                  width="1200"
+                  height="936"
+                  loading="lazy"
+                />
+              </a>
+              <div class="solar-product-copy">
+                <div class="product-tag-row">
+                  <span>Trusted Brand</span>
+                  <span>Premium Quality</span>
+                </div>
+                <h3>Solar Electrical Protection Solutions</h3>
+                <ul class="product-feature-list">
+                  <li>Reliable System Protection</li>
+                  <li>Weather-Ready Enclosures</li>
+                  <li>Safe AC/DC Isolation</li>
+                  <li>Installation Support</li>
+                </ul>
+                <a class="btn btn-primary product-cta" href="#survey">Get Quote</a>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section contact" id="contact">
+        <div class="section-inner contact-layout">
+          <div class="contact-card reveal">
+            <img class="contact-logo" src="assets/prakash-energy-logo.webp" alt="Prakash Energy logo" width="260" height="260" loading="lazy" />
+            <p class="eyebrow">Contact</p>
+            <h2>Prakash Energy</h2>
+            <address>
+              1098, Himalayan City,<br />
+              Near Omaxe City,<br />
+              Bijnor Road,<br />
+              Lucknow, Uttar Pradesh
+            </address>
+            <div class="contact-actions">
+              <a class="btn btn-primary" href="tel:+918318643370">8318643370</a>
+              <a class="btn btn-secondary" href="tel:+918181082381">8181082381</a>
+              <a class="btn btn-whatsapp" data-whatsapp="contact" href="#">WhatsApp</a>
+              <a class="btn btn-call" target="_blank" rel="noreferrer" href="https://www.google.com/maps/search/?api=1&query=1098%20Himalayan%20City%20Near%20Omaxe%20City%20Bijnor%20Road%20Lucknow%20Uttar%20Pradesh">Get Directions</a>
+            </div>
+          </div>
+          <div class="map-card reveal">
+            <iframe
+              title="Prakash Energy location map"
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"
+              src="https://www.google.com/maps?q=1098%20Himalayan%20City%20Near%20Omaxe%20City%20Bijnor%20Road%20Lucknow%20Uttar%20Pradesh&output=embed">
+            </iframe>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="section-inner footer-inner">
+        <a class="brand" href="#top">
+          <span class="brand-logo-wrap"><img class="brand-logo" src="assets/prakash-energy-logo.webp" alt="Prakash Energy logo" width="156" height="156" loading="lazy" /></span>
+          <span><strong>Prakash Energy</strong><small>Solar Solutions</small></span>
+        </a>
+        <p>Solar Installation Lucknow | Solar Company Lucknow | Solar Panel Installation UP</p>
+      </div>
+    </footer>
+
+    <div class="floating-actions" aria-label="Quick contact actions">
+      <a class="float-btn whatsapp" data-whatsapp="floating" href="#" aria-label="WhatsApp Prakash Energy">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm4.6 13.4c-.2.6-1.3 1.2-1.8 1.2s-1 .1-3.2-.8c-2.7-1.1-4.4-3.8-4.5-4-.1-.2-1.1-1.5-1.1-2.8s.7-2 1-2.2c.2-.3.5-.4.7-.4h.6c.2 0 .4 0 .6.4l.8 1.9c.1.2.1.4 0 .6l-.4.6c-.2.2-.3.3-.1.6.1.2.6 1.1 1.4 1.8 1 .9 1.8 1.2 2.1 1.4.3.1.5.1.6-.1l.9-1.1c.2-.2.4-.3.7-.2l1.9.9c.2.1.2.6.1 1.2Z"/></svg>
+      </a>
+      <a class="float-btn call" href="tel:+918318643370" aria-label="Call Prakash Energy">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8c1.4 2.8 3.8 5.2 6.6 6.6l2.2-2.2c.3-.3.8-.4 1.2-.2 1.3.4 2.7.7 4.1.7.7 0 1.3.6 1.3 1.3v3.6c0 .7-.6 1.4-1.3 1.4C10.4 22 2 13.6 2 3.3 2 2.6 2.6 2 3.3 2H7c.7 0 1.3.6 1.3 1.3 0 1.4.2 2.8.7 4.1.1.4 0 .9-.3 1.2l-2.1 2.2Z"/></svg>
+      </a>
+    </div>
+
+    <div class="lightbox" hidden>
+      <button type="button" aria-label="Close gallery image">x</button>
+      <img src="assets/hero1-980.webp" alt="" width="980" height="548" loading="lazy" />
+      <p></p>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>

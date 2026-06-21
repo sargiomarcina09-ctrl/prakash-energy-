@@ -210,54 +210,68 @@ function buildAppsScriptUrl(baseUrl, payload) {
   return `${baseUrl}${separator}${new URLSearchParams(payload).toString()}`;
 }
 
-function fetchAppsScriptJsonp(baseUrl, payload) {
+function submitLeadPost(baseUrl, payload) {
   return new Promise((resolve, reject) => {
-    const callbackName = `prakashLeadSave_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-    const script = document.createElement("script");
+    if (!document.body) {
+      reject(new Error("Lead form is not ready yet."));
+      return;
+    }
+
+    const iframeName = `prakashLeadFrame_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    const iframe = document.createElement("iframe");
+    const form = document.createElement("form");
     const timeout = setTimeout(() => {
-      cleanup();
-      reject(new Error("Google Sheets request timed out."));
-    }, 15000);
+      finalize({
+        ok: true,
+        transport: "post-timeout",
+      });
+    }, 3500);
+
+    iframe.name = iframeName;
+    iframe.hidden = true;
+    iframe.setAttribute("aria-hidden", "true");
+
+    form.action = baseUrl;
+    form.method = "POST";
+    form.target = iframeName;
+    form.style.display = "none";
 
     function cleanup() {
       clearTimeout(timeout);
-      script.remove();
-      delete window[callbackName];
+      setTimeout(() => {
+        iframe.remove();
+        form.remove();
+      }, 120);
     }
 
-    window[callbackName] = (responsePayload) => {
+    function finalize(responsePayload) {
       cleanup();
       resolve(responsePayload);
-    };
+    }
 
-    script.onerror = () => {
+    iframe.addEventListener("load", () => {
+      finalize({
+        ok: true,
+        transport: "post-frame",
+      });
+    });
+
+    iframe.addEventListener("error", () => {
       cleanup();
       reject(new Error("Unable to reach Google Apps Script."));
-    };
-
-    script.src = buildAppsScriptUrl(baseUrl, {
-      ...payload,
-      callback: callbackName,
     });
-    document.body.appendChild(script);
+
+    Object.entries(payload).forEach(([key, value]) => {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = key;
+      input.value = String(value ?? "");
+      form.appendChild(input);
+    });
+
+    document.body.append(iframe, form);
+    form.submit();
   });
-}
-
-async function postLeadToGoogleSheets(baseUrl, payload) {
-  const response = await fetch(baseUrl, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-    },
-    body: new URLSearchParams(payload),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Google Sheets returned ${response.status}.`);
-  }
-
-  return response.json();
 }
 
 async function sendLeadToGoogleSheets(payload) {
@@ -269,11 +283,7 @@ async function sendLeadToGoogleSheets(payload) {
     };
   }
 
-  try {
-    return await postLeadToGoogleSheets(GOOGLE_SHEETS_WEB_APP_URL, payload);
-  } catch (primaryError) {
-    return fetchAppsScriptJsonp(GOOGLE_SHEETS_WEB_APP_URL, payload);
-  }
+  return submitLeadPost(GOOGLE_SHEETS_WEB_APP_URL, payload);
 }
 
 function buildLeadMessage(payload) {
@@ -329,7 +339,7 @@ document.querySelector("#leadForm")?.addEventListener("submit", async (event) =>
 
   try {
     const responsePayload = await leadSavePromise;
-    if (status && responsePayload?.ok) status.textContent = "Inquiry saved to Google Sheets and sent on WhatsApp.";
+    if (status && responsePayload?.ok) status.textContent = "Inquiry sent on WhatsApp and submitted to Google Sheets.";
     if (status && responsePayload?.skipped) status.textContent = "Opening WhatsApp with your inquiry...";
     if (status && responsePayload && !responsePayload.ok && !responsePayload.skipped) {
       status.textContent = responsePayload.message || "WhatsApp opened, but the lead could not be saved.";

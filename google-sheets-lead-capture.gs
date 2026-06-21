@@ -1,153 +1,200 @@
-# Google Sheets Lead Capture Setup
-
-This website already includes:
-
-- Public lead form integration
-- WhatsApp enquiry flow
-- Admin dashboard lead viewer
-- Google Apps Script backend file
-
-## Files to use
-
-- `google-sheets-lead-capture.gs`
-- `config.js`
-- `admin.html`
-
-## 1. Create the Google Sheet
-
-1. Open Google Sheets.
-2. Create a new spreadsheet.
-3. Copy the Sheet ID from the URL.
-
-Example:
-
-```text
-https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit
-```
-
-## 2. Update the Sheet ID in Apps Script
-
-Open `google-sheets-lead-capture.gs` and replace:
-
-```js
 const SPREADSHEET_ID = "PASTE_SHEET_ID";
-```
-
-with your real Sheet ID.
-
-## 3. Create the Apps Script project
-
-1. Open [script.google.com](https://script.google.com).
-2. Create a new project.
-3. Replace the default code with the full contents of `google-sheets-lead-capture.gs`.
-
-## 4. Prepare the sheet and admin password
-
-In Apps Script, run:
-
-```js
-setupLeadSheet()
-```
-
-This will:
-
-- create or prepare the `Leads` sheet
-- add the headers:
-  - `Date`
-  - `Name`
-  - `Phone`
-  - `Email`
-  - `Message`
-- sync the admin password hash
-
-Current admin password in the local project:
-
-```text
-prakash369energy
-```
-
-If you want to change it later, update:
-
-```js
+const SHEET_NAME = "Leads";
+const LEAD_HEADERS = ["Date", "Name", "Phone", "Email", "Message"];
+const ADMIN_PASSWORD_HASH_PROPERTY = "ADMIN_PASSWORD_HASH";
 const ADMIN_PASSWORD = "prakash369energy";
-```
 
-Then run:
+function doPost(e) {
+  const data = extractRequestData_(e);
+  const action = data.action || "saveLead";
 
-```js
-syncAdminPassword()
-```
+  if (action === "saveLead") {
+    return respond_(saveLead_(data), data.callback);
+  }
 
-## 5. Deploy the Apps Script Web App
+  return respond_({ ok: false, message: "Unsupported action." }, data.callback);
+}
 
-1. Click `Deploy`.
-2. Click `New deployment`.
-3. Choose `Web app`.
-4. Set:
-   - `Execute as`: `Me`
-   - `Who has access`: `Anyone`
-5. Deploy.
-6. Copy the Web App URL.
+function doGet(e) {
+  const data = extractRequestData_(e);
+  const action = data.action || "";
 
-## 6. Connect the website frontend
+  if (action === "saveLead") {
+    return respond_(saveLead_(data), data.callback);
+  }
 
-The local project is already updated with your deployed Web App URL in `config.js`:
+  if (action === "listLeads") {
+    return respond_(listLeads_(data.passwordHash || ""), data.callback);
+  }
 
-```js
-window.PRAKASH_CONFIG = {
-  googleSheetsWebAppUrl: "https://script.google.com/macros/s/AKfycby--2XnY1KpsKUpwmUmzfZupQrIZubl6DGLXMJ37KPGfMbRLvjTgGZfz7BK8TvT-npsuQ/exec",
-};
-```
+  return respond_({ ok: false, message: "Unsupported action." }, data.callback);
+}
 
-If you redeploy Apps Script later, replace this URL with the new one.
+function saveLead_(data) {
+  const sheet = getLeadSheet_();
 
-## 7. What happens after setup
+  sheet.appendRow([
+    parseLeadDate_(data.timestamp),
+    data.name || "",
+    data.phone || "",
+    data.email || "",
+    data.message || "",
+  ]);
 
-When a user submits the enquiry form:
+  return { ok: true };
+}
 
-1. Lead is saved to Google Sheets
-2. WhatsApp opens with the enquiry details
-3. Admin dashboard can fetch and search leads
+function listLeads_(passwordHash) {
+  const expectedHash = PropertiesService.getScriptProperties().getProperty(ADMIN_PASSWORD_HASH_PROPERTY);
 
-## 8. Request actions used by the website
+  if (!expectedHash) {
+    return {
+      ok: false,
+      message: "Admin password is not configured in Apps Script.",
+    };
+  }
 
-The website now uses these Apps Script actions:
+  if (!passwordHash || passwordHash !== expectedHash) {
+    return {
+      ok: false,
+      message: "Incorrect admin password.",
+    };
+  }
 
-- `saveLead`
-  - sent by the enquiry form
-  - primary method: `POST`
-  - browser fallback: `GET`
-- `listLeads`
-  - sent by the admin dashboard
-  - primary method: `GET`
-  - browser fallback: `JSONP`
+  const sheet = getLeadSheet_();
+  const values = sheet.getDataRange().getValues();
+  const rows = values.slice(1).reverse();
 
-If you update `google-sheets-lead-capture.gs`, deploy a new Web App version before testing again.
+  return {
+    ok: true,
+    leads: rows.map((row) => ({
+      date: normalizeDate_(row[0]),
+      name: row[1] || "",
+      phone: row[2] || "",
+      email: row[3] || "",
+      message: row[4] || "",
+    })),
+  };
+}
 
-## Lead fields stored in Google Sheets
+function setupLeadSheet() {
+  getLeadSheet_();
+  syncAdminPassword();
+  Logger.log("Lead sheet is ready and admin password hash is synced.");
+}
 
-- Date
-- Name
-- Phone
-- Email
-- Message
+function syncAdminPassword() {
+  const hash = sha256_(ADMIN_PASSWORD);
+  PropertiesService.getScriptProperties().setProperty(ADMIN_PASSWORD_HASH_PROPERTY, hash);
+  Logger.log("Admin password hash synced. Run this once after changing ADMIN_PASSWORD, then redeploy.");
+}
 
-## Admin dashboard
+function setAdminPassword() {
+  syncAdminPassword();
+}
 
-Open:
+function getLeadSheet_() {
+  const spreadsheet = getSpreadsheet_();
+  let sheet = spreadsheet.getSheetByName(SHEET_NAME);
 
-- `admin.html`
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet(SHEET_NAME);
+  }
 
-Use the admin password:
+  ensureHeaders_(sheet);
+  return sheet;
+}
 
-```text
-prakash369energy
-```
+function getSpreadsheet_() {
+  if (!SPREADSHEET_ID || SPREADSHEET_ID === "PASTE_SHEET_ID") {
+    throw new Error("Replace PASTE_SHEET_ID with your real Google Sheet ID.");
+  }
 
-The dashboard shows:
+  return SpreadsheetApp.openById(SPREADSHEET_ID);
+}
 
-- Date
-- Name
-- Phone
-- Email
-- Message
+function ensureHeaders_(sheet) {
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(LEAD_HEADERS);
+    return;
+  }
+
+  const currentHeaders = sheet.getRange(1, 1, 1, LEAD_HEADERS.length).getValues()[0];
+  const matches = LEAD_HEADERS.every((header, index) => currentHeaders[index] === header);
+
+  if (!matches) {
+    sheet.getRange(1, 1, 1, LEAD_HEADERS.length).setValues([LEAD_HEADERS]);
+  }
+}
+
+function parseLeadDate_(value) {
+  const parsed = new Date(value || Date.now());
+  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+}
+
+function normalizeDate_(value) {
+  if (Object.prototype.toString.call(value) === "[object Date]") {
+    return value.toISOString();
+  }
+
+  return value || "";
+}
+
+function extractRequestData_(e) {
+  const data = Object.assign({}, (e && e.parameter) || {});
+  const contents = e && e.postData && e.postData.contents;
+
+  if (contents) {
+    if (/application\/json/i.test((e.postData.type || ""))) {
+      try {
+        const jsonData = JSON.parse(contents);
+        Object.keys(jsonData || {}).forEach((key) => {
+          if (!(key in data)) data[key] = jsonData[key];
+        });
+      } catch (error) {
+        // Ignore malformed JSON and fall back to standard parameters.
+      }
+    } else if (Object.keys(data).length === 0) {
+      contents.split("&").forEach((pair) => {
+        if (!pair) return;
+        const parts = pair.split("=");
+        const key = decodeURIComponent((parts.shift() || "").replace(/\+/g, " "));
+        if (!key || key in data) return;
+        data[key] = decodeURIComponent(parts.join("=").replace(/\+/g, " "));
+      });
+    }
+  }
+
+  return data;
+}
+
+function respond_(payload, callback) {
+  return callback ? jsonp_(payload, callback) : json_(payload);
+}
+
+function json_(payload) {
+  return ContentService
+    .createTextOutput(JSON.stringify(payload))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function jsonp_(payload, callback) {
+  const safeCallback = /^[a-zA-Z_$][\w$]*$/.test(callback || "") ? callback : "";
+
+  if (!safeCallback) {
+    return json_(payload);
+  }
+
+  return ContentService
+    .createTextOutput(`${safeCallback}(${JSON.stringify(payload)});`)
+    .setMimeType(ContentService.MimeType.JAVASCRIPT);
+}
+
+function sha256_(value) {
+  return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, value)
+    .map((byte) => {
+      const unsigned = byte < 0 ? byte + 256 : byte;
+      return unsigned.toString(16).padStart(2, "0");
+    })
+    .join("");
+}
