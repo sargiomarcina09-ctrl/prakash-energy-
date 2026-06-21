@@ -31,61 +31,52 @@ function buildAppsScriptUrl(baseUrl, payload) {
   return `${baseUrl}${separator}${new URLSearchParams(payload).toString()}`;
 }
 
+function parseAppsScriptResponse(text) {
+  const trimmed = String(text || "").trim();
+
+  if (!trimmed) {
+    throw new Error("Google Apps Script returned an empty response.");
+  }
+
+  try {
+    return JSON.parse(trimmed);
+  } catch (jsonError) {
+    const jsonpMatch = trimmed.match(/^[a-zA-Z_$][\w$]*\(([\s\S]+)\);?$/);
+
+    if (jsonpMatch) {
+      return JSON.parse(jsonpMatch[1]);
+    }
+
+    if (/^<!doctype html/i.test(trimmed) || /^<html/i.test(trimmed)) {
+      throw new Error("Google Apps Script returned HTML instead of JSON. Check that the deployed /exec URL is correct.");
+    }
+
+    throw new Error("Google Apps Script returned an unexpected response.");
+  }
+}
+
 async function fetchJson(url) {
-  const response = await fetch(url, {
-    method: "GET",
-    headers: {
-      Accept: "application/json",
-    },
-  });
+  let response;
+
+  try {
+    response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+      cache: "no-store",
+    });
+  } catch (error) {
+    throw new Error("Unable to reach Google Apps Script. Check the deployed Web App URL and access settings.");
+  }
+
+  const text = await response.text();
 
   if (!response.ok) {
     throw new Error(`Google Apps Script returned ${response.status}.`);
   }
 
-  return response.json();
-}
-
-function fetchJsonp(url) {
-  return new Promise((resolve, reject) => {
-    const callbackName = `prakashLeads_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-    const script = document.createElement("script");
-    const timeout = setTimeout(() => {
-      cleanup();
-      reject(new Error("Lead request timed out."));
-    }, 15000);
-
-    function cleanup() {
-      clearTimeout(timeout);
-      script.remove();
-      delete window[callbackName];
-    }
-
-    window[callbackName] = (payload) => {
-      cleanup();
-      resolve(payload);
-    };
-
-    script.onerror = () => {
-      cleanup();
-      reject(new Error("Unable to reach Google Apps Script."));
-    };
-
-    script.src = buildAppsScriptUrl(url, {
-      callback: callbackName,
-    });
-    document.body.appendChild(script);
-  });
-}
-
-async function requestAppsScript(payload) {
-  const url = buildAppsScriptUrl(ADMIN_ENDPOINT, payload);
-
-  try {
-    return await fetchJson(url);
-  } catch (error) {
-    return fetchJsonp(url);
-  }
+  return parseAppsScriptResponse(text);
 }
 
 async function loadLeads() {
@@ -101,7 +92,7 @@ async function loadLeads() {
     action: "listLeads",
     passwordHash,
   };
-  const responsePayload = await requestAppsScript(payload);
+  const responsePayload = await fetchJson(buildAppsScriptUrl(ADMIN_ENDPOINT, payload));
 
   if (!responsePayload?.ok) {
     throw new Error(responsePayload?.message || "Access denied.");

@@ -32,7 +32,7 @@
           <h2>Enter admin password</h2>
           <p class="muted">The password is verified by Google Apps Script before lead data is returned.</p>
         </div>
-        <form id="loginForm" class="login-form">
+        <form id="loginForm" class="login-form" action="javascript:void(0)" method="post">
           <label for="adminPassword">Admin Password</label>
           <div class="password-row">
             <input id="adminPassword" name="password" type="password" autocomplete="current-password" required />
